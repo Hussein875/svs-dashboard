@@ -6,15 +6,66 @@ body {
   color: #333;
 }
 
-h1 {
-  text-align: center;
-  margin-bottom: 40px;
-  font-size: 28px;
-  color: #222;
+/* Kopfbereich (Ticker + Logo) */
+.top-bar {
+  display: flex;
+  align-items: center;
+  background: #e3f2fd;
+  padding: 16px 30px;
+  width: 100%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  border-bottom: 2px solid #90caf9;
+  border-radius: 0 0 12px 12px;
+  position: relative;
+  z-index: 100;
 }
 
+.logo-container {
+  flex-shrink: 0;
+  margin-right: 20px;
+}
+
+.logo {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
+}
+
+.ticker-container {
+  white-space: nowrap;
+  overflow: hidden;
+  width: 100%;
+  position: relative;
+}
+
+.ticker {
+  display: inline-flex;
+  animation: ticker-scroll 25s linear infinite;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1565c0;
+  align-items: center;
+  gap: 50px; /* Abstand zwischen original und Clone */
+  padding-left: 100%;
+}
+
+.ticker-track {
+  display: inline-block;
+  white-space: nowrap;
+  animation: ticker-scroll 25s linear infinite;
+}
+
+@keyframes ticker-scroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+/* Board / Spalten */
 .board {
-  background-color: yellow;
   display: flex;
   flex-wrap: nowrap;
   gap: 25px;
@@ -22,7 +73,7 @@ h1 {
   align-items: flex-start;
   overflow-x: auto;
   padding-bottom: 20px;
-  background-color: black;
+  background-color: #fff;
 }
 
 .column {
@@ -45,6 +96,7 @@ h1 {
   padding-bottom: 5px;
 }
 
+/* Karten */
 .card {
   background: #e9eef3;
   margin: 6px 0;
@@ -60,48 +112,48 @@ h1 {
   cursor: pointer;
 }
 
+/* Statusfarben */
+.dot.red     { background-color: #e31313ff; }
+.dot.yellow  { background-color: #ff7300ff; }
+.dot.green   { background-color: #13e339ff; }
+
+/* Timer + Legende unten */
+.bottom-bar {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 9999;
+}
+
 .update-info {
-  padding: 10px 16px;
   font-size: 14px;
   font-family: sans-serif;
+  background-color: #f2f2f2;
+  padding: 8px 12px;
   border-radius: 8px;
+  font-weight: bold;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  transition: background-color 0.5s;
-  z-index: 9999;
-  position: fixed;
-  text-align: right;
-  background-color: rebeccapurple;
 }
 
-.bottom-right {
-  bottom: 20px;
-  right: 20px;
+.update-info.green  { background-color: #e6f4ea; color: #1b5e20; }
+.update-info.orange { background-color: #fff3e0; color: #ef6c00; }
+.update-info.red    { background-color: #ffebee; color: #b71c1c; }
+
+.legend {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.update-info.green {
-  background-color: #e0f8e0;
-  color: #2e7d32;
-  text-align: right;
-  background-color: red;
-
-}
-
-.update-info.orange {
-  background-color: #fff4e0;
-  color: #f57c00;
-}
-
-.update-info.red {
-  background-color: #ffe0e0;
-  color: #c62828;
-}
-
-.update-info.blink {
-  animation: blink-animation 1s steps(2, start) infinite;
-}
-
-@keyframes blink-animation {
-  to {
-    visibility: hidden;
-  }
+.legend .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
 }

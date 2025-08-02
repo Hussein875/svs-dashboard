@@ -1,7 +1,24 @@
+// Ticker-Animation starten, wenn DOM geladen ist
+window.addEventListener("DOMContentLoaded", () => {
+  fetchData();
+  startTickerAnimation();
+});
+
+function startTickerAnimation() {
+  const ticker = document.querySelector('.ticker');
+  if (ticker) {
+    const spans = ticker.querySelectorAll('.ticker-span');
+    spans.forEach(span => {
+      span.style.animation = 'ticker-scroll 25s linear infinite';
+    });
+  }
+}
 const sheetID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
 const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json`;
 
 const columns = ["Eingang", "Ahmet", "Hadi", "Osama", "Erledigt"];
+
+let lastFetchTime = null;
 
 // Aktenzeichen extrahieren (z. B. RB 1012 → "RB 1012", 1078 → "1078")
 function extractAktenzeichen(text) {
@@ -27,8 +44,29 @@ function fetchData() {
         row.Eingang !== '' &&
         row.Eingang.toLowerCase() !== 'eingang'
       );
+      
+// Berechne höchste Aktennummer für "nächste Nummer"
+// 1. Nach dem Parsen der Daten:
+const nummern = rows
+  .map(r => r.Eingang.match(/\d+/))              // Ziffern aus Aktenzeichen extrahieren
+  .filter(match => match && !isNaN(match[0]))     // nur gültige Nummern
+  .map(match => parseInt(match[0], 10));          // als Zahl umwandeln
+
+let nextNummer = '–';
+if (nummern.length > 0) {
+  const maxNummer = Math.max(...nummern);
+  nextNummer = maxNummer + 1;
+}
+
+const tickerText = `Aktuelle Nummer: ${nextNummer} `;
+const tickerElement = document.querySelector('.ticker');
+
+if (tickerElement) {
+  tickerElement.innerHTML = `<span class="ticker-span">${tickerText}</span>`;
+}
 
       renderBoard(rows);
+      lastFetchTime = new Date(); // Merke Uhrzeit des echten Abrufs
       updateTimerDisplay(); // ✅ Das ist die einzige wichtige Zeile hier für den Timer
 
     });
@@ -54,7 +92,7 @@ function updateTimerDisplay() {
 
   const updateInfo = document.getElementById("updateInfo");
   updateInfo.innerHTML =
-    `⏱️ <b>Letztes Update:</b> ${now.toLocaleTimeString()} &nbsp;|&nbsp; 🔄 <b>Nächstes in:</b> ${minutesLeft}m ${secondsLeft}s`;
+    `⏱️ <b>Letztes Update:</b> ${lastFetchTime ? lastFetchTime.toLocaleTimeString() : "unbekannt"} &nbsp;|&nbsp; 🔄 <b>Nächstes in:</b> ${minutesLeft}m ${secondsLeft}s`;
 
   // Farbe zurücksetzen
   updateInfo.className = 'update-info';
@@ -65,8 +103,7 @@ function updateTimerDisplay() {
     updateInfo.classList.add('orange');
   } else {
     updateInfo.classList.add('red');
-    updateInfo.classList.add('blink');
-  }
+    }
 }
 
 // Board visualisieren
@@ -89,7 +126,8 @@ function renderBoard(data) {
       status: status
     };
 
-    if (status.includes('geprüft o')) {
+      // trifft auf geprüft o, geprüft 1 oder geprüft 2 zu (Groß-/Kleinschreibung egal)
+    if (/geprüft [o12]/i.test(status)) {
       map.Erledigt.push(akte);
     } else if (columns.includes(row.Bearbeiter)) {
       map[row.Bearbeiter].push(akte);
@@ -115,10 +153,17 @@ function renderBoard(data) {
       const card = document.createElement('div');
       card.className = 'card';
 
-      if (status.includes('vollständig')) {
-        card.style.backgroundColor = '#007bff';
-        card.style.color = 'white';
-      }
+    // ✅ Farbe erst nach Erzeugung der Karte setzen
+    if (/geprüft [o12]/i.test(status)) {
+      card.style.backgroundColor = '#13e339ff'; // grün
+      card.style.color = 'white';
+    } else if (status.includes('vollständig')) {
+      card.style.backgroundColor = '#ff7300ff'; // gelb
+      card.style.color = 'white';
+    } else if (status.includes('unvollständig')) {
+      card.style.backgroundColor = '#e31313ff'; // rot
+      card.style.color = 'white';
+    }
 
       card.innerText = aktenzeichen;
       colDiv.appendChild(card);
@@ -128,8 +173,6 @@ function renderBoard(data) {
   });
 }
 
-// Beim Laden starten
-window.addEventListener("DOMContentLoaded", fetchData);
 
 setInterval(updateTimerDisplay, 1000); // Live-Countdown
 

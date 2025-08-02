@@ -4,10 +4,36 @@
   <meta charset="UTF-8" />
   <title>Dashboard – Aufträge</title>
   <link rel="stylesheet" href="style.css">
-  <script src="https://unpkg.com/tabletop@1.6.4/tabletop.js"></script>
 </head>
 <body>
+
+  <!-- Kopfzeile mit Logo und Ticker -->
+  <div class="top-bar">
+    <div class="logo-container">
+      <img src="logo.png" alt="SV-Souleiman Logo" class="logo" />
+    </div>
+
+    <div class="ticker-container">
+      <div class="ticker">
+        <span id="naechsteNummer"></span>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <!-- Kanban-Board -->
   <div class="board" id="board"></div>
-<div id="updateInfo" class="update-info bottom-right"></div>  <script src="script.js"></script>
+
+  <!-- Untere Leiste mit Legende und Timer -->
+  <div class="bottom-bar">
+    <div class="legend">
+      <span><span class="dot red"></span> Unvollständig</span>
+      <span><span class="dot yellow"></span> Zu prüfen</span>
+      <span><span class="dot green"></span> Geprüft</span>
+    </div>
+    <div id="updateInfo" class="update-info"></div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
