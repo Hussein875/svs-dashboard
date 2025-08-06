@@ -44,26 +44,26 @@ function fetchData() {
         row.Eingang !== '' &&
         row.Eingang.toLowerCase() !== 'eingang'
       );
-      
-// Berechne höchste Aktennummer für "nächste Nummer"
-// 1. Nach dem Parsen der Daten:
-const nummern = rows
-  .map(r => r.Eingang.match(/\d+/))              // Ziffern aus Aktenzeichen extrahieren
-  .filter(match => match && !isNaN(match[0]))     // nur gültige Nummern
-  .map(match => parseInt(match[0], 10));          // als Zahl umwandeln
 
-let nextNummer = '–';
-if (nummern.length > 0) {
-  const maxNummer = Math.max(...nummern);
-  nextNummer = maxNummer + 1;
-}
+      // Berechne höchste Aktennummer für "nächste Nummer"
+      // 1. Nach dem Parsen der Daten:
+      const nummern = rows
+        .map(r => r.Eingang.match(/\d+/))              // Ziffern aus Aktenzeichen extrahieren
+        .filter(match => match && !isNaN(match[0]))     // nur gültige Nummern
+        .map(match => parseInt(match[0], 10));          // als Zahl umwandeln
 
-const tickerText = `Aktuelle Nummer: ${nextNummer} `;
-const tickerElement = document.querySelector('.ticker');
+      let nextNummer = '–';
+      if (nummern.length > 0) {
+        const maxNummer = Math.max(...nummern);
+        nextNummer = maxNummer + 1;
+      }
 
-if (tickerElement) {
-  tickerElement.innerHTML = `<span class="ticker-span">${tickerText}</span>`;
-}
+      const tickerText = `Aktuelle Nummer: ${nextNummer} `;
+      const tickerElement = document.querySelector('.ticker');
+
+      if (tickerElement) {
+        tickerElement.innerHTML = `<span class="ticker-span">${tickerText}</span>`;
+      }
 
       renderBoard(rows);
       lastFetchTime = new Date(); // Merke Uhrzeit des echten Abrufs
@@ -76,11 +76,14 @@ if (tickerElement) {
 function updateTimerDisplay() {
   const now = new Date();
   const minutes = now.getMinutes();
-  const nextQuarter = Math.ceil((minutes + 1) / 15) * 15;
+
+  // Nächstes 5-Minuten-Intervall berechnen
+  const nextFive = Math.ceil((minutes + 1) / 5) * 5;
   const nextUpdate = new Date(now);
-  nextUpdate.setMinutes(nextQuarter);
+  nextUpdate.setMinutes(nextFive);
   nextUpdate.setSeconds(0);
 
+  // Falls nextFive 60 ist, auf nächste Stunde setzen
   if (nextUpdate.getMinutes() === 60) {
     nextUpdate.setHours(nextUpdate.getHours() + 1);
     nextUpdate.setMinutes(0);
@@ -97,13 +100,13 @@ function updateTimerDisplay() {
   // Farbe zurücksetzen
   updateInfo.className = 'update-info';
 
-  if (minutesLeft >= 5) {
+  if (minutesLeft >= 3) {
     updateInfo.classList.add('green');
   } else if (minutesLeft >= 1) {
     updateInfo.classList.add('orange');
   } else {
     updateInfo.classList.add('red');
-    }
+  }
 }
 
 // Board visualisieren
@@ -126,7 +129,7 @@ function renderBoard(data) {
       status: status
     };
 
-      // trifft auf geprüft o, geprüft 1 oder geprüft 2 zu (Groß-/Kleinschreibung egal)
+    // trifft auf geprüft o, geprüft 1 oder geprüft 2 zu (Groß-/Kleinschreibung egal)
     if (/geprüft [o12]/i.test(status)) {
       map.Erledigt.push(akte);
     } else if (columns.includes(row.Bearbeiter)) {
@@ -153,17 +156,17 @@ function renderBoard(data) {
       const card = document.createElement('div');
       card.className = 'card';
 
-    // ✅ Farbe erst nach Erzeugung der Karte setzen
-    if (/geprüft [o12]/i.test(status)) {
-      card.style.backgroundColor = '#13e339ff'; // grün
-      card.style.color = 'white';
-    } else if (status.includes('vollständig')) {
-      card.style.backgroundColor = '#ff7300ff'; // gelb
-      card.style.color = 'white';
-    } else if (status.includes('unvollständig')) {
-      card.style.backgroundColor = '#e31313ff'; // rot
-      card.style.color = 'white';
-    }
+      // ✅ Farbe erst nach Erzeugung der Karte setzen
+      if (/geprüft [o12]/i.test(status)) {
+        card.style.backgroundColor = '#13e339ff'; // grün
+        card.style.color = 'white';
+      } else if (status.includes('vollständig')) {
+        card.style.backgroundColor = '#ff7300ff'; // gelb
+        card.style.color = 'white';
+      } else if (status.includes('unvollständig')) {
+        card.style.backgroundColor = '#e31313ff'; // rot
+        card.style.color = 'white';
+      }
 
       card.innerText = aktenzeichen;
       colDiv.appendChild(card);
