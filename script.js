@@ -148,7 +148,8 @@ function renderBoard(data) {
     colDiv.className = 'column';
 
     const h2 = document.createElement('h2');
-    h2.innerText = col;
+    const anzahl = map[col].length;
+    h2.innerText = `${col} (${anzahl})`;
     colDiv.appendChild(h2);
 
     map[col].forEach(item => {
