@@ -16,7 +16,7 @@ function startTickerAnimation() {
 const sheetID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
 const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json`;
 
-const columns = ["Eingang", "Ahmet", "Hadi", "Osama", "Erledigt"];
+const columns = ["Eingang", "Ahmet", "Hadi", "Osama", "Geprüft"];
 
 let lastFetchTime = null;
 
@@ -119,19 +119,23 @@ function renderBoard(data) {
     Ahmet: [],
     Hadi: [],
     Osama: [],
-    Erledigt: []
+    Geprüft: []
   };
 
   data.forEach(row => {
     const status = row.Status.toLowerCase();
     const akte = {
       nummer: row.Eingang,
-      status: status
+      status: status,
+      bearbeiter: row.Bearbeiter
     };
 
     // trifft auf geprüft o, geprüft 1 oder geprüft 2 zu (Groß-/Kleinschreibung egal)
-    if (/geprüft [o12]/i.test(status)) {
-      map.Erledigt.push(akte);
+    console.log(akte.status)
+    if (/geprüft [o12hjhk]/i.test(status)) {
+      map.Geprüft.push(akte);
+    } else if (status.trim().toLowerCase() === 'vollständig') {
+      map.Osama.push(akte);
     } else if (columns.includes(row.Bearbeiter)) {
       map[row.Bearbeiter].push(akte);
     } else {
@@ -150,21 +154,27 @@ function renderBoard(data) {
     map[col].forEach(item => {
       const aktenzeichen = typeof item === 'string' ? item : item.nummer;
       const status = typeof item === 'object' ? item.status : '';
+      const bearbeiter = item.bearbeiter;
 
       if (aktenzeichen.toLowerCase() === col.toLowerCase()) return;
 
       const card = document.createElement('div');
       card.className = 'card';
 
+      if (bearbeiter === 'HJ') {
+        card.classList.add('hj');
+        card.title = 'Bearbeitung durch Hannover (HJ)';
+      }
+
       // ✅ Farbe erst nach Erzeugung der Karte setzen
       if (/geprüft [o12]/i.test(status)) {
         card.style.backgroundColor = '#13e339ff'; // grün
         card.style.color = 'white';
-      } else if (status.includes('vollständig')) {
-        card.style.backgroundColor = '#ff7300ff'; // gelb
-        card.style.color = 'white';
       } else if (status.includes('unvollständig')) {
         card.style.backgroundColor = '#e31313ff'; // rot
+        card.style.color = 'white';
+      } else if (status.includes('vollständig')) {
+        card.style.backgroundColor = '#ff7300ff'; // orange
         card.style.color = 'white';
       }
 

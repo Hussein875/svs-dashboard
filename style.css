@@ -157,3 +157,7 @@ body {
   border-radius: 50%;
   margin-right: 6px;
 }
+
+.card.hj {
+  opacity: 0.4 !important;
+}
