@@ -149,7 +149,7 @@ function renderBoard(data) {
 
     const h2 = document.createElement('h2');
     const anzahl = map[col].length;
-    h2.innerText = `${col} (${anzahl})`;
+    h2.innerText = anzahl > 0 ? `${col} (${anzahl})` : col;
     colDiv.appendChild(h2);
 
     map[col].forEach(item => {
