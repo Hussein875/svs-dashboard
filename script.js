@@ -162,10 +162,10 @@ function renderBoard(data) {
       const card = document.createElement('div');
       card.className = 'card';
 
-      if (bearbeiter === 'HJ') {
-        card.classList.add('hj');
-        card.title = 'Bearbeitung durch Hannover (HJ)';
-      }
+     //if (bearbeiter === 'HJ') {
+     //    card.classList.add('hj');
+     //   card.title = 'Bearbeitung durch Hannover (HJ)';
+     // }
 
       // ✅ Farbe erst nach Erzeugung der Karte setzen
       if (/geprüft [o12]/i.test(status)) {
