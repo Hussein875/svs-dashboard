@@ -168,7 +168,7 @@ function renderBoard(data) {
      // }
 
       // ✅ Farbe erst nach Erzeugung der Karte setzen
-      if (/geprüft [o12]/i.test(status)) {
+      if (/geprüft [o12hjkl]/i.test(status)) {
         card.style.backgroundColor = '#13e339ff'; // grün
         card.style.color = 'white';
       } else if (status.includes('unvollständig')) {
