@@ -16,7 +16,7 @@ function startTickerAnimation() {
 const sheetID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
 const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json`;
 
-const columns = ["Eingang", "Hadi","Ramazan", "Osama", "Geprüft"];
+const columns = ["Eingang","Hadi" ,"Ramazan", "Hussein", "Osama", "Geprüft"];
 
 let lastFetchTime = null;
 
@@ -118,6 +118,7 @@ function renderBoard(data) {
     Eingang: [],
     Hadi: [],
     Ramazan: [],
+    Hussein: [],
     Osama: [],
     Geprüft: []
   };
