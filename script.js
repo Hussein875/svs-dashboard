@@ -16,7 +16,7 @@ function startTickerAnimation() {
 const sheetID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
 const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json`;
 
-const columns = ["Eingang", "Ahmet", "Hadi","Ramazan", "Osama", "Geprüft"];
+const columns = ["Eingang", "Hadi","Ramazan", "Osama", "Geprüft"];
 
 let lastFetchTime = null;
 
@@ -58,7 +58,7 @@ function fetchData() {
         nextNummer = maxNummer + 1;
       }
 
-      const tickerText = `🌴 Aktuelle Nummer: ${nextNummer} 🌴`;
+      const tickerText = `Aktuelle Nummer: ${nextNummer}`;
       const tickerElement = document.querySelector('.ticker');
 
       if (tickerElement) {
@@ -116,7 +116,6 @@ function renderBoard(data) {
 
   const map = {
     Eingang: [],
-    Ahmet: [],
     Hadi: [],
     Ramazan: [],
     Osama: [],
