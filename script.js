@@ -58,7 +58,7 @@ function fetchData() {
         nextNummer = maxNummer + 1;
       }
 
-      const tickerText = `Aktuelle Nummer: ${nextNummer}`;
+      const tickerText = `🍁 Aktuelle Nummer: ${nextNummer} 🍂`;
       const tickerElement = document.querySelector('.ticker');
 
       if (tickerElement) {
