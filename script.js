@@ -1,146 +1,143 @@
-// Ticker-Animation starten, wenn DOM geladen ist
-window.addEventListener("DOMContentLoaded", () => {
-  fetchData();
-  startTickerAnimation();
-});
+// --- 1) Ticker-Animation: nach JEDEM Update neu starten ---
+function setTickerText(text) {
+  const ticker = document.querySelector('.ticker');
+  if (!ticker) return;
+  ticker.textContent = '';                       // XSS-sicher
+  const span = document.createElement('span');
+  span.className = 'ticker-span';
+  span.textContent = text;
+  ticker.appendChild(span);
+  startTickerAnimation();                        // <- neu: Animation reaktivieren
+}
 
 function startTickerAnimation() {
-  const ticker = document.querySelector('.ticker');
-  if (ticker) {
-    const spans = ticker.querySelectorAll('.ticker-span');
-    spans.forEach(span => {
-      span.style.animation = 'ticker-scroll 25s linear infinite';
-    });
-  }
+  const spans = document.querySelectorAll('.ticker .ticker-span');
+  spans.forEach(span => {
+    span.style.animation = 'ticker-scroll 25s linear infinite';
+  });
 }
+
+// --- 2) Fetch: Überlappungen vermeiden + robustere JSON-Extraktion ---
+let lastFetchTime = null;
+let inFlightController = null;
+
 const sheetID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
 const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json`;
 
+// Spalten-Definition und Board-Map automatisch synchron halten
 const columns = ["Eingang", "Hadi", "Ramazan", "Hussein", "Osama", "Geprüft"];
+function makeEmptyMap() {
+  return columns.reduce((m, c) => (m[c] = [], m), {});
+}
 
-let lastFetchTime = null;
+window.addEventListener("DOMContentLoaded", () => {
+  fetchData();
+  startTickerAnimation();
+  setInterval(updateTimerDisplay, 1000);   // Live-Countdown
+  setInterval(fetchData, 60000);           // alle 60s neu
+});
 
-// Aktenzeichen extrahieren (z. B. RB 1012 → "RB 1012", 1078 → "1078")
 function extractAktenzeichen(text) {
   if (!text) return '';
   const match = text.match(/^(RB|KVA)?\s*\d+/i);
-  return match ? match[0].toUpperCase().replace(/\s+/, ' ') : text;
-}
-// Daten aus dem Google Sheet abrufen und verarbeiten
-function fetchData() {
-  fetch(url)
-    .then(res => res.text())
-    .then(text => {
-      const json = JSON.parse(text.substr(47).slice(0, -2));
-
-      const rows = json.table.rows.map(row => {
-        const eingangRaw = row.c[0]?.v !== null && row.c[0]?.v !== undefined ? String(row.c[0].v).trim() : '';
-        const eingang = extractAktenzeichen(eingangRaw);
-        const bearbeiter = row.c[1]?.v !== null && row.c[1]?.v !== undefined ? String(row.c[1].v).trim() : '';
-        const status = row.c[2]?.v !== null && row.c[2]?.v !== undefined ? String(row.c[2].v).trim().toLowerCase() : '';
-
-        return { Eingang: eingang, Bearbeiter: bearbeiter, Status: status };
-      }).filter(row =>
-        row.Eingang !== '' &&
-        row.Eingang.toLowerCase() !== 'eingang'
-      );
-
-      // Berechne höchste Aktennummer für "nächste Nummer"
-      // 1. Nach dem Parsen der Daten:
-      const nummern = rows
-        .map(r => r.Eingang.match(/\d+/))              // Ziffern aus Aktenzeichen extrahieren
-        .filter(match => match && !isNaN(match[0]))     // nur gültige Nummern
-        .map(match => parseInt(match[0], 10));          // als Zahl umwandeln
-
-      let nextNummer = '–';
-      if (nummern.length > 0) {
-        const maxNummer = Math.max(...nummern);
-        nextNummer = maxNummer + 1;
-      }
-
-      const tickerText = `🍁 Aktuelle Nummer: ${nextNummer} 🍂`;
-      const tickerElement = document.querySelector('.ticker');
-
-      if (tickerElement) {
-        tickerElement.innerHTML = `<span class="ticker-span">${tickerText}</span>`;
-      }
-
-      renderBoard(rows);
-      lastFetchTime = new Date(); // Merke Uhrzeit des echten Abrufs
-      updateTimerDisplay(); // ✅ Das ist die einzige wichtige Zeile hier für den Timer
-
-    });
+  return match ? match[0].toUpperCase().replace(/\s+/, ' ') : String(text).trim();
 }
 
-//Timer visualiserung
+// robuster Parser für gviz-JSONP
+function parseGviz(text) {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end === -1) throw new Error('GViz JSON nicht gefunden');
+  return JSON.parse(text.slice(start, end + 1));
+}
+
+async function fetchData() {
+  try {
+    // laufenden Request abbrechen (z. B. bei langsamer Verbindung)
+    if (inFlightController) inFlightController.abort();
+    inFlightController = new AbortController();
+
+    const res = await fetch(url, { signal: inFlightController.signal, cache: 'no-store' });
+    const raw = await res.text();
+    const json = parseGviz(raw);
+
+    const rows = json.table.rows.map(row => {
+      const eingangRaw = row.c[0]?.v ?? '';
+      const eingang = extractAktenzeichen(eingangRaw);
+      const bearbeiter = (row.c[1]?.v ?? '').toString().trim();
+      const status = (row.c[2]?.v ?? '').toString().trim().toLowerCase();
+      return { Eingang: eingang, Bearbeiter: bearbeiter, Status: status };
+    }).filter(r => r.Eingang && r.Eingang.toLowerCase() !== 'eingang');
+
+    // 3) "versendet" einheitlich (case-insensitive) filtern, inkl. Varianten
+    const cleaned = rows.filter(r => !/^versendet\b/i.test(r.Status));
+
+    // 4) nächste Nummer berechnen (nur Ziffern)
+    const nummern = cleaned
+      .map(r => (r.Eingang.match(/\d+/) ?? [null])[0])
+      .filter(n => n !== null)
+      .map(n => parseInt(n, 10))
+      .filter(n => Number.isFinite(n));
+
+    const nextNummer = nummern.length ? Math.max(...nummern) + 1 : '–';
+
+    setTickerText(`🍁 Aktuelle Nummer: ${nextNummer} 🍂`);
+
+    renderBoard(cleaned);
+    lastFetchTime = new Date();   // Zeitpunkt des echten Abrufs
+    updateTimerDisplay();
+  } catch (err) {
+    if (err.name === 'AbortError') return; // ignorieren
+    console.error('fetchData() Fehler:', err);
+  } finally {
+    inFlightController = null;
+  }
+}
+
+// --- 5) Timer robuster machen (Guard + TZ konsequent) ---
 function updateTimerDisplay() {
+  const el = document.getElementById("updateInfo");
+  if (!el) return;
+
   const now = new Date();
   const minutes = now.getMinutes();
-
-  // Nächstes 5-Minuten-Intervall berechnen
   const nextFive = Math.ceil((minutes + 1) / 5) * 5;
   const nextUpdate = new Date(now);
-  nextUpdate.setMinutes(nextFive);
-  nextUpdate.setSeconds(0);
-
-  // Falls nextFive 60 ist, auf nächste Stunde setzen
-  if (nextUpdate.getMinutes() === 60) {
-    nextUpdate.setHours(nextUpdate.getHours() + 1);
-    nextUpdate.setMinutes(0);
-  }
+  nextUpdate.setMinutes(nextFive === 60 ? 0 : nextFive, 0, 0);
+  if (nextFive === 60) nextUpdate.setHours(nextUpdate.getHours() + 1);
 
   const diffMs = nextUpdate - now;
-  const minutesLeft = Math.floor(diffMs / 60000);
-  const secondsLeft = Math.floor((diffMs % 60000) / 1000);
+  const minutesLeft = Math.max(0, Math.floor(diffMs / 60000));
+  const secondsLeft = Math.max(0, Math.floor((diffMs % 60000) / 1000));
 
-  const updateInfo = document.getElementById("updateInfo");
-  updateInfo.innerHTML =
-    `⏱️ <b>Letztes Update:</b> ${lastFetchTime ? lastFetchTime.toLocaleTimeString() : "unbekannt"} &nbsp;|&nbsp; 🔄 <b>Nächstes in:</b> ${minutesLeft}m ${secondsLeft}s`;
+  const timeFmt = new Intl.DateTimeFormat('de-DE', {
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
 
-  // Farbe zurücksetzen
-  updateInfo.className = 'update-info';
+  el.className = 'update-info';
+  if (minutesLeft >= 3) el.classList.add('green');
+  else if (minutesLeft >= 1) el.classList.add('orange');
+  else el.classList.add('red');
 
-  if (minutesLeft >= 3) {
-    updateInfo.classList.add('green');
-  } else if (minutesLeft >= 1) {
-    updateInfo.classList.add('orange');
-  } else {
-    updateInfo.classList.add('red');
-  }
+  el.innerHTML = `⏱️ <b>Letztes Update:</b> ${lastFetchTime ? timeFmt.format(lastFetchTime) : "unbekannt"} ` +
+                 `&nbsp;|&nbsp; 🔄 <b>Nächstes in:</b> ${minutesLeft}m ${secondsLeft}s`;
 }
 
-// Board visualisieren
+// --- 6) Board-Render: DocumentFragment, sichere textContent, konsistente Regeln ---
 function renderBoard(data) {
   const board = document.getElementById('board');
-  board.innerHTML = '';
+  if (!board) return;
 
-  const map = {
-    Eingang: [],
-    Hadi: [],
-    Ramazan: [],
-    Hussein: [],
-    Osama: [],
-    Geprüft: []
-  };
+  const map = makeEmptyMap();
 
   data.forEach(row => {
-    const status = row.Status.toLowerCase();
-    const akte = {
-      nummer: row.Eingang,
-      status: status,
-      bearbeiter: row.Bearbeiter
-    };
+    const status = row.Status.toLowerCase().trim();
+    const akte = { nummer: row.Eingang, status, bearbeiter: row.Bearbeiter };
 
-    // Wenn Status "versendet" → überspringen
-    if (status.trim() === "versendet") {
-      return; // geht zur nächsten Iteration
-    }
-
-    // trifft auf geprüft o, geprüft 1 oder geprüft 2 zu (Groß-/Kleinschreibung egal)
-    console.log(akte.status)
-    if (/geprüft [o12hjhk]/i.test(status)) {
+    // geprüft (o/1/2/h/j/k) – einheitlich
+    if (/^geprüft\s*[o12hjk]$/i.test(status)) {
       map.Geprüft.push(akte);
-    } else if (status.trim().toLowerCase() === 'vollständig') {
+    } else if (status === 'vollständig') {
       map.Osama.push(akte);
     } else if (columns.includes(row.Bearbeiter)) {
       map[row.Bearbeiter].push(akte);
@@ -149,32 +146,37 @@ function renderBoard(data) {
     }
   });
 
+  // optional: innerhalb der Spalten nach Nummer sortieren (absteigend)
+  for (const col of columns) {
+    map[col].sort((a, b) => {
+      const na = parseInt((a.nummer.match(/\d+/) ?? ['0'])[0], 10);
+      const nb = parseInt((b.nummer.match(/\d+/) ?? ['0'])[0], 10);
+      return nb - na;
+    });
+  }
+
+  // DOM effizient aufbauen
+  board.textContent = '';
+  const frag = document.createDocumentFragment();
+
   columns.forEach(col => {
     const colDiv = document.createElement('div');
     colDiv.className = 'column';
 
     const h2 = document.createElement('h2');
     const anzahl = map[col].length;
-    h2.innerText = anzahl > 0 ? `${col} (${anzahl})` : col;
+    h2.textContent = anzahl > 0 ? `${col} (${anzahl})` : col;
     colDiv.appendChild(h2);
 
     map[col].forEach(item => {
-      const aktenzeichen = typeof item === 'string' ? item : item.nummer;
-      const status = typeof item === 'object' ? item.status : '';
-      const bearbeiter = item.bearbeiter;
-
+      const { nummer: aktenzeichen, status } = item;
       if (aktenzeichen.toLowerCase() === col.toLowerCase()) return;
 
       const card = document.createElement('div');
       card.className = 'card';
 
-      //if (bearbeiter === 'HJ') {
-      //    card.classList.add('hj');
-      //   card.title = 'Bearbeitung durch Hannover (HJ)';
-      // }
-
-      // ✅ Farbe erst nach Erzeugung der Karte setzen
-      if (/geprüft [o12hjkl]/i.test(status)) {
+      // Farben
+      if (/^geprüft\s*[o12hjk]$/i.test(status)) {
         card.style.backgroundColor = '#13e339ff'; // grün
         card.style.color = 'white';
       } else if (status.includes('unvollständig')) {
@@ -185,16 +187,12 @@ function renderBoard(data) {
         card.style.color = 'white';
       }
 
-      card.innerText = aktenzeichen;
+      card.textContent = aktenzeichen;  // sicher
       colDiv.appendChild(card);
     });
 
-    board.appendChild(colDiv);
+    frag.appendChild(colDiv);
   });
+
+  board.appendChild(frag);
 }
-
-
-setInterval(updateTimerDisplay, 1000); // Live-Countdown
-
-// Automatisch alle 60 Sekunden neu laden
-setInterval(fetchData, 60000);
