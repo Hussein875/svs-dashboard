@@ -16,7 +16,7 @@ function startTickerAnimation() {
 const sheetID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
 const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json`;
 
-const columns = ["Eingang","Hadi" ,"Ramazan", "Hussein", "Osama", "Geprüft"];
+const columns = ["Eingang", "Hadi", "Ramazan", "Hussein", "Osama", "Geprüft"];
 
 let lastFetchTime = null;
 
@@ -131,6 +131,11 @@ function renderBoard(data) {
       bearbeiter: row.Bearbeiter
     };
 
+    // Wenn Status "versendet" → überspringen
+    if (status.trim() === "versendet") {
+      return; // geht zur nächsten Iteration
+    }
+
     // trifft auf geprüft o, geprüft 1 oder geprüft 2 zu (Groß-/Kleinschreibung egal)
     console.log(akte.status)
     if (/geprüft [o12hjhk]/i.test(status)) {
@@ -163,10 +168,10 @@ function renderBoard(data) {
       const card = document.createElement('div');
       card.className = 'card';
 
-     //if (bearbeiter === 'HJ') {
-     //    card.classList.add('hj');
-     //   card.title = 'Bearbeitung durch Hannover (HJ)';
-     // }
+      //if (bearbeiter === 'HJ') {
+      //    card.classList.add('hj');
+      //   card.title = 'Bearbeitung durch Hannover (HJ)';
+      // }
 
       // ✅ Farbe erst nach Erzeugung der Karte setzen
       if (/geprüft [o12hjkl]/i.test(status)) {
