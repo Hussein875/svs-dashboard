@@ -176,7 +176,7 @@ function renderBoard(data) {
       card.className = 'card';
 
       // Farben
-      if (/^geprüft\s*[o12hjk]$/i.test(status)) {
+      if (/^geprüft\s*(O|1|2|HJ|HK)$/i.test(status)) {
         card.style.backgroundColor = '#13e339ff'; // grün
         card.style.color = 'white';
       } else if (status.includes('unvollständig')) {
