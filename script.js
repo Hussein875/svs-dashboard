@@ -134,8 +134,8 @@ function renderBoard(data) {
     const status = row.Status.toLowerCase().trim();
     const akte = { nummer: row.Eingang, status, bearbeiter: row.Bearbeiter };
 
-    // geprüft (o/1/2/h/j/k) – einheitlich
-    if (/^geprüft\s*[o12hjk]$/i.test(status)) {
+    // geprüft (o/1/2/HJ/HK) – einheitlich
+      if (/^geprüft\s*(O|1|2|HJ|HK)$/i.test(status)) {
       map.Geprüft.push(akte);
     } else if (status === 'vollständig') {
       map.Osama.push(akte);
