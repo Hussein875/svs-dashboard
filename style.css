@@ -76,6 +76,21 @@ body {
   background-color: #fff;
 }
 
+.stats-bar {
+  max-width: 1200px;
+  margin: 16px auto 12px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #000000;
+  font-size: 16px;
+  font-weight: 500;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.25);
+}
+
 .column {
   background: #fff;
   padding: 15px;

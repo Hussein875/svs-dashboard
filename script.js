@@ -26,9 +26,8 @@ const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:j
 
 // Spalten-Definition und Board-Map automatisch synchron halten
 const columns = ["Eingang", "Hadi", "Ramazan", "Osama", "Geprüft"];
-function makeEmptyMap() {
-  return columns.reduce((m, c) => (m[c] = [], m), {});
-}
+// Key für die einfache Tages-/Wochenstatistik (nur Nummern-Differenzen)
+const STATS_ENDPOINT = 'https://script.google.com/macros/s/AKfycbza16YNgG6pXVWEUJmKEKpNgVGjyx1A9y-e2M0d0L4Bjsf7_jZpuD3j7wPwrFy1AGtLfw/exec';
 
 window.addEventListener("DOMContentLoaded", () => {
   fetchData();
@@ -66,6 +65,7 @@ async function fetchData() {
       const eingang = extractAktenzeichen(eingangRaw);
       const bearbeiter = (row.c[1]?.v ?? '').toString().trim();
       const status = (row.c[2]?.v ?? '').toString().trim().toLowerCase();
+
       return { Eingang: eingang, Bearbeiter: bearbeiter, Status: status };
     }).filter(r => r.Eingang && r.Eingang.toLowerCase() !== 'eingang');
 
@@ -79,9 +79,13 @@ async function fetchData() {
       .map(n => parseInt(n, 10))
       .filter(n => Number.isFinite(n));
 
-    const nextNummer = nummern.length ? Math.max(...nummern) + 1 : '–';
+    const nextNummer = nummern.length ? Math.max(...nummern) + 1 : 0;
 
-    setTickerText(`🏖️ Aktuelle Nummer: ${nextNummer} 🌴`);
+    // 3a) Tages- und Wochenstatistik aus der aktuellen Nummer ableiten
+    const stats = await computeStatsFromNext(nextNummer);
+    updateStatsBar(stats);
+
+    setTickerText(`🏖️ Aktuelle Nummer: ${nextNummer || '–'} 🌴`);
 
     renderBoard(cleaned);
     lastFetchTime = new Date();   // Zeitpunkt des echten Abrufs
@@ -124,6 +128,12 @@ function updateTimerDisplay() {
 }
 
 // --- 6) Board-Render: DocumentFragment, sichere textContent, konsistente Regeln ---
+function makeEmptyMap() {
+  return columns.reduce((map, col) => {
+    map[col] = [];
+    return map;
+  }, {});
+}
 function renderBoard(data) {
   const board = document.getElementById('board');
   if (!board) return;
@@ -195,4 +205,138 @@ function renderBoard(data) {
   });
 
   board.appendChild(frag);
+}
+// --- 7) Tages- und Wochenzähler ---
+function getMonday(date) {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = d.getDay(); // So = 0, Mo = 1, ...
+  const diff = (day + 6) % 7; // Mo = 0, Di = 1, ...
+  d.setDate(d.getDate() - diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function toDateKey(d) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeDateKey(value) {
+  if (!value) return null;
+
+  // Versuchen, das, was vom Backend kommt (Date-Objekt-String wie
+  // "Fri Nov 07 2025 03:00:00 GMT+0400 (Golf-Zeit)" oder "2025-11-07")
+  // in unser YYYY-MM-DD-Format zu bringen.
+  const d = new Date(value);
+  if (!isNaN(d.getTime())) {
+    return toDateKey(d);
+  }
+
+  return String(value).trim();
+}
+
+async function loadSimpleStats() {
+  try {
+    const res = await fetch(`${STATS_ENDPOINT}?t=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) {
+      throw new Error(`Stats-GET HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    return {
+      day: data.day || null,
+      week: data.week || null,
+    };
+  } catch (e) {
+    console.warn('Konnte Stats nicht vom Backend laden, starte neu:', e);
+    return { day: null, week: null };
+  }
+}
+
+async function saveSimpleStats(stats) {
+  try {
+    await fetch(STATS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(stats),
+    });
+  } catch (e) {
+    console.warn('Konnte Stats nicht zum Backend speichern:', e);
+  }
+}
+
+async function computeStatsFromNext(currentNext) {
+  const today = new Date();
+  const todayKey = toDateKey(today);
+  const mondayKey = toDateKey(getMonday(today));
+
+  const stats = await loadSimpleStats() || {};
+
+  // vorhandene Keys aus dem Backend normalisieren (können Date-Strings sein)
+  if (stats.day && stats.day.dateKey) {
+    stats.day.dateKey = normalizeDateKey(stats.day.dateKey);
+  }
+  if (stats.week && (stats.week.mondayKey || stats.week.dateKey)) {
+    const rawWeekKey = stats.week.mondayKey || stats.week.dateKey;
+    stats.week.mondayKey = normalizeDateKey(rawWeekKey);
+  }
+
+  // Falls du initial nur base eingetragen hast (dateKey/mondayKey leer),
+  // übernehmen wir diese Basis für HEUTE / DIESE WOCHE und setzen NUR das Datum.
+  if (stats.day && !stats.day.dateKey) {
+    stats.day.dateKey = todayKey;
+  }
+  if (stats.week && !stats.week.mondayKey) {
+    stats.week.mondayKey = mondayKey;
+  }
+
+  // Sicherheits-Defaults, falls noch gar nichts vorhanden ist
+  if (!stats.day) {
+       stats.day = { dateKey: todayKey, base: currentNext };
+  }
+  if (!stats.week) {
+    stats.week = { mondayKey, base: currentNext };
+  }
+
+  // Roll-Over: wenn ein neuer Tag/Woche beginnt, Basis auf aktuelle Nummer setzen
+  if (stats.day.dateKey !== todayKey) {
+    stats.day = { dateKey: todayKey, base: currentNext };
+  }
+  if (stats.week.mondayKey !== mondayKey) {
+    stats.week = { mondayKey, base: currentNext };
+  }
+
+  await saveSimpleStats(stats);
+
+  const todayBase = Number(stats.day.base) || 0;
+  const weekBase = Number(stats.week.base) || 0;
+
+  const todayCount = Math.max(0, currentNext - todayBase);
+  const weekCount = Math.max(0, currentNext - weekBase);
+
+  return { todayCount, weekCount };
+}
+
+function updateStatsBar(stats) {
+  const board = document.getElementById('board');
+  if (!board) return;
+
+  let bar = document.getElementById('statsBar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'statsBar';
+    bar.className = 'stats-bar';
+
+    if (board.parentNode) {
+      board.parentNode.insertBefore(bar, board);
+    } else {
+      document.body.insertBefore(bar, document.body.firstChild);
+    }
+  }
+
+  bar.innerHTML =
+    `📊 &nbsp;<b>Heute:&nbsp;</b> ${stats.todayCount} Gutachten` +
+    ` &nbsp;|&nbsp; ` +
+    `📅 &nbsp;<b>Diese Woche:&nbsp;</b> ${stats.weekCount} Gutachten`;
 }
