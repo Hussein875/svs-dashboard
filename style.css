@@ -158,6 +158,51 @@ body {
   margin-right: 6px;
 }
 
+/* Externe Mitarbeiter unterscheiden (HJ vs. Hussein)
+   Hinweis: Diese Klassen greifen, wenn die Karte zusätzlich die Klasse
+   `.hj` bzw. `.hussein` bekommt (z. B. durch euer Render-Skript). */
+.card.extern.hj {
+  border-color: #6a1b9a;               /* lila */
+}
+
+.card.extern.hussein {
+  border-color: #0d47a1;               /* blau */
+}
+
+/* Optional: Wenn Karten allgemein die Klasse `.hj` bekommen sollen, nicht ausblassen */
 .card.hj {
-  opacity: 0.4 !important;
+  opacity: 1;
+}
+
+.card.extern {
+  position: relative;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(0,0,0,0.05),
+    rgba(0,0,0,0.05) 10px,
+    transparent 10px,
+    transparent 20px
+  );
+  font-weight: 700;
+}
+
+.extern-badge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+/* Badge-Farben zur Unterscheidung */
+.card.extern.hj .extern-badge {
+  background: #0d47a1 /* blau */
+}
+
+.card.extern.hussein .extern-badge {
+  background: #0d47a1; /* blau */
 }

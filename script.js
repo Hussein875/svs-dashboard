@@ -1,3 +1,5 @@
+const externeMitarbeiter = ['HJ', 'Hussein'];
+
 // --- 1) Ticker-Animation: nach JEDEM Update neu starten ---
 function setTickerText(text) {
   const ticker = document.querySelector('.ticker');
@@ -175,6 +177,9 @@ function renderBoard(data) {
       const card = document.createElement('div');
       card.className = 'card';
 
+      // Basis-Text zuerst setzen (wichtig: sonst entfernt textContent spätere Children wie Badges)
+      card.textContent = aktenzeichen;  // sicher
+
       // Farben
       if (/^geprüft\s*(O|1|2|HJ|HK)$/i.test(status)) {
         card.style.backgroundColor = '#13e339ff'; // grün
@@ -187,7 +192,22 @@ function renderBoard(data) {
         card.style.color = 'white';
       }
 
-      card.textContent = aktenzeichen;  // sicher
+      // Externe Mitarbeiter unterscheiden (HJ vs Hussein Berlin)
+      const externeMap = {
+        'HJ': { cls: 'hj', label: 'H' },
+        'Hussein': { cls: 'hussein', label: 'B' },
+      };
+
+      const bearbeiter = (item.bearbeiter || '').toString().trim();
+      if (externeMap[bearbeiter]) {
+        card.classList.add('extern', externeMap[bearbeiter].cls);
+
+        const badge = document.createElement('div');
+        badge.className = 'extern-badge';
+        badge.textContent = externeMap[bearbeiter].label;
+        card.appendChild(badge);
+      }
+
       colDiv.appendChild(card);
     });
 
