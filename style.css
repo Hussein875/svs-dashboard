@@ -206,3 +206,121 @@ body {
 .card.extern.hussein .extern-badge {
   background: #0d47a1; /* blau */
 }
+
+/* =========================================================
+   Offene Akten – Gesamtzähler (unten mittig)
+   ========================================================= */
+#openCountWidget{
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 9998; /* unter Top-Bar, über Board */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  border: 2px solid rgba(0,0,0,0.12);
+  background: #ffffff;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+
+#openCountWidget .label{
+  font-size: 13px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #555;
+  white-space: nowrap;
+}
+
+#openCountWidget .value{
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  min-width: 44px;
+  text-align: center;
+}
+
+#openCountWidget .chip{
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+/* Status: ruhig */
+#openCountWidget.state-green{
+  border-color: #1e8e3e;
+  background: #f3fff6;
+}
+
+#openCountWidget.state-green .chip{
+  background: #1e8e3e;
+}
+
+#openCountWidget.state-green .value{
+  color: #1b1b1b;
+}
+
+/* Status: aufmerksam */
+#openCountWidget.state-yellow{
+  border-color: #f4b400;
+  background: #fff9e6;
+}
+
+#openCountWidget.state-yellow .chip{
+  background: #f4b400;
+}
+
+#openCountWidget.state-yellow .value{
+  color: #1b1b1b;
+}
+
+/* Status: kritisch */
+#openCountWidget.state-orange{
+  border-color: #fb8c00;
+  background: #fff1e6;
+}
+
+#openCountWidget.state-orange .chip{
+  background: #fb8c00;
+}
+
+#openCountWidget.state-orange .value{
+  color: #1b1b1b;
+}
+
+/* Status: Überlast / "brennt" */
+#openCountWidget.state-burn{
+  border-color: #b00020;
+  background: #fff1f4;
+  animation: openCountPulse 0.8s ease-in-out infinite;
+}
+
+#openCountWidget.state-burn .chip{
+  background: #b00020;
+  box-shadow: 0 0 14px rgba(176,0,32,0.9);
+}
+
+#openCountWidget.state-burn .value{
+  color: #7a0015; /* dunkelrot, bedrohlich aber lesbar */
+  text-shadow:
+    0 0 12px rgba(176,0,32,0.7);
+}
+
+@keyframes openCountPulse{
+  0%   { transform: translateX(-50%) scale(1); }
+  50%  { transform: translateX(-50%) scale(1.05); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+@media (max-width: 600px){
+  #openCountWidget{
+    bottom: 12px;
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  #openCountWidget .value{
+    font-size: 24px;
+  }
+}

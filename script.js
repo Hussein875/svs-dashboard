@@ -32,7 +32,78 @@ function makeEmptyMap() {
   return columns.reduce((m, c) => (m[c] = [], m), {});
 }
 
+// --- 2b) Offene-Fälle Counter (unten mittig) ---
+let openCountEl = null;
+
+function ensureOpenCountWidget() {
+  if (openCountEl) return openCountEl;
+
+  // De-Dupe: falls durch Live-Reload / alte Versionen mehrere Widgets existieren
+  const all = document.querySelectorAll('#openCountWidget');
+  if (all.length > 1) {
+    // Bevorzugt: das Widget in der Bottom-Bar behalten
+    const inBottom = Array.from(all).find(el => el.closest('.bottom-bar'));
+    const keep = inBottom || all[0];
+    all.forEach(el => { if (el !== keep) el.remove(); });
+  }
+
+  // Prefer existing markup in the bottom bar
+  const existingAll = document.querySelectorAll('#openCountWidget');
+  const existing = Array.from(existingAll).find(el => el.closest('.bottom-bar')) || document.getElementById('openCountWidget');
+  if (existing) {
+    openCountEl = existing;
+    return openCountEl;
+  }
+
+  // Fallback: create if not present
+  const el = document.createElement('div');
+  el.id = 'openCountWidget';
+  el.className = 'state-green';
+
+  const chip = document.createElement('div');
+  chip.className = 'chip';
+
+  const label = document.createElement('div');
+  label.className = 'label';
+  label.textContent = 'Offene Akten';
+
+  const value = document.createElement('div');
+  value.className = 'value';
+  value.textContent = '0';
+
+  el.appendChild(chip);
+  el.appendChild(label);
+  el.appendChild(value);
+
+  // Try to place into bottom bar if present
+  const bottomBar = document.querySelector('.bottom-bar');
+  if (bottomBar) bottomBar.insertBefore(el, document.getElementById('updateInfo'));
+  else document.body.appendChild(el);
+
+  openCountEl = el;
+  return el;
+}
+
+function setOpenCount(count) {
+  const el = ensureOpenCountWidget();
+  const valueEl = el.querySelector('.value');
+  if (valueEl) valueEl.textContent = String(count ?? 0);
+
+  // Schwellwerte: <10 grün, 10–19 gelb, 20–29 orange/rot, >=30 „brennen"
+  el.classList.remove('state-green', 'state-yellow', 'state-orange', 'state-red', 'state-burn');
+
+  const n = Number(count) || 0;
+  if (n >= 30) el.classList.add('state-burn');
+  else if (n >= 20) el.classList.add('state-orange');
+  else if (n >= 10) el.classList.add('state-yellow');
+  else el.classList.add('state-green');
+
+  // kleine Zusatzinfo im Tooltip
+  el.title = `Offene / nicht versendete Akten: ${n}`;
+}
+
 window.addEventListener("DOMContentLoaded", () => {
+  ensureOpenCountWidget();
   fetchData();
   startTickerAnimation();
   setInterval(updateTimerDisplay, 1000);   // Live-Countdown
@@ -73,6 +144,8 @@ async function fetchData() {
 
     // 3) "versendet" einheitlich (case-insensitive) filtern, inkl. Varianten
     const cleaned = rows.filter(r => !/^versendet\b/i.test(r.Status));
+    // Offene Akten (Summe aller Spalten, da "versendet" bereits herausgefiltert ist)
+    setOpenCount(cleaned.length);
 
     // 4) nächste Nummer berechnen (nur Ziffern)
     const nummern = cleaned
@@ -83,7 +156,7 @@ async function fetchData() {
 
     const nextNummer = nummern.length ? Math.max(...nummern) + 1 : '–';
 
-    setTickerText(`🎄 Aktuelle Nummer: ${nextNummer} 🎅🏻`);
+    setTickerText(`🎆 Aktuelle Nummer: ${nextNummer} 🎉`);
 
     renderBoard(cleaned);
     lastFetchTime = new Date();   // Zeitpunkt des echten Abrufs
@@ -137,7 +210,7 @@ function renderBoard(data) {
     const akte = { nummer: row.Eingang, status, bearbeiter: row.Bearbeiter };
 
     // geprüft (o/1/2/HJ/HK) – einheitlich
-      if (/^geprüft\s*(O|1|2|HJ|HK)$/i.test(status)) {
+    if (/^geprüft\s*(O|1|2|HJ|HK)$/i.test(status)) {
       map.Geprüft.push(akte);
     } else if (status === 'vollständig') {
       map.Osama.push(akte);
