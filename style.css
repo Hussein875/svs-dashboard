@@ -169,6 +169,10 @@ body {
   border-color: #0d47a1;               /* blau */
 }
 
+.card.extern.hu {
+  border-color: #1b1b1b;               /* schwarz */
+}
+
 /* Optional: Wenn Karten allgemein die Klasse `.hj` bekommen sollen, nicht ausblassen */
 .card.hj {
   opacity: 1;
