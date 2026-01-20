@@ -156,7 +156,7 @@ async function fetchData() {
 
     const nextNummer = nummern.length ? Math.max(...nummern) + 1 : '–';
 
-    setTickerText(`🎆 Aktuelle Nummer: ${nextNummer} 🎉`);
+    setTickerText(`💥Aktuelle Nummer: ${nextNummer} 🚗`);
 
     renderBoard(cleaned);
     lastFetchTime = new Date();   // Zeitpunkt des echten Abrufs
