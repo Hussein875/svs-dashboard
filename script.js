@@ -269,6 +269,7 @@ function renderBoard(data) {
       const externeMap = {
         'HJ': { cls: 'hj', label: 'H' },
         'Hussein': { cls: 'hussein', label: 'B' },
+        'HU': { cls: 'hu', label: 'HU' }
       };
 
       const bearbeiter = (item.bearbeiter || '').toString().trim();
