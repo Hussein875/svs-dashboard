@@ -3,8 +3,6 @@ const FETCH_INTERVAL_MS = 60_000;
 const FETCH_TIMEOUT_MS = 25_000;
 const SHEET_ID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
-const IMPORT_LOG_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=ImportLog`;
-const TAGES_STAT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=TagesStat`;
 
 // Board configuration
 const columns = ['Eingang', 'Hadi', 'Ramazan', 'Robar', 'Osama', 'Geprüft'];
@@ -34,104 +32,6 @@ let nextFetchTime = null;
 let inFlightController = null;
 let lastFetchError = '';
 let openCountEl = null;
-let statsInFlightController = null;
-
-function todayDateKey(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function weekStartDateKey(date = new Date()) {
-  const d = new Date(date);
-  const weekday = d.getDay();
-  const diff = weekday === 0 ? -6 : 1 - weekday;
-  d.setDate(d.getDate() + diff);
-  return todayDateKey(d);
-}
-
-function parseGvizRows(text) {
-  const json = parseGviz(text);
-  return Array.isArray(json?.table?.rows) ? json.table.rows : [];
-}
-
-function setUploadStats({ todayCount, weekCount, syncLabel }) {
-  const todayEl = document.getElementById('uploadTodayValue');
-  const weekEl = document.getElementById('uploadWeekValue');
-  const syncEl = document.getElementById('uploadSyncValue');
-  const widget = document.getElementById('uploadStatsWidget');
-
-  if (todayEl) todayEl.textContent = String(todayCount ?? '–');
-  if (weekEl) weekEl.textContent = String(weekCount ?? '–');
-  if (syncEl) syncEl.textContent = syncLabel ?? '–';
-
-  if (widget) {
-    widget.classList.remove('sync-ok', 'sync-open');
-    if (syncLabel === 'OK') widget.classList.add('sync-ok');
-    else if (syncLabel === 'Offen') widget.classList.add('sync-open');
-    widget.title = `Neue Akten heute: ${todayCount ?? '–'} | Diese Woche: ${weekCount ?? '–'} | Drive-Sync: ${syncLabel ?? '–'}`;
-  }
-}
-
-function computeImportStats(logRows, tagesStatRows) {
-  const today = todayDateKey();
-  const weekStart = weekStartDateKey();
-  const todayImports = new Set();
-  const weekImports = new Set();
-
-  logRows.forEach((row) => {
-    const date = String(row.c?.[0]?.v ?? '').trim();
-    const nummer = String(row.c?.[2]?.v ?? '').replace(/[^0-9]/g, '');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !nummer) return;
-
-    if (date === today) todayImports.add(nummer);
-    if (date >= weekStart && date <= today) weekImports.add(nummer);
-  });
-
-  let syncLabel = '–';
-  for (let i = tagesStatRows.length - 1; i >= 0; i -= 1) {
-    const date = String(tagesStatRows[i].c?.[0]?.v ?? '').trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date !== today) continue;
-    syncLabel = String(tagesStatRows[i].c?.[4]?.v ?? '–').trim() || '–';
-    break;
-  }
-
-  return {
-    todayCount: todayImports.size,
-    weekCount: weekImports.size,
-    syncLabel
-  };
-}
-
-async function fetchImportStats() {
-  if (statsInFlightController) return;
-
-  statsInFlightController = new AbortController();
-  const timeoutId = window.setTimeout(() => {
-    if (statsInFlightController) statsInFlightController.abort();
-  }, FETCH_TIMEOUT_MS);
-
-  try {
-    const [logRes, statRes] = await Promise.all([
-      fetch(IMPORT_LOG_URL, { signal: statsInFlightController.signal, cache: 'no-store' }),
-      fetch(TAGES_STAT_URL, { signal: statsInFlightController.signal, cache: 'no-store' })
-    ]);
-
-    if (!logRes.ok && !statRes.ok) return;
-
-    const logRows = logRes.ok ? parseGvizRows(await logRes.text()) : [];
-    const tagesStatRows = statRes.ok ? parseGvizRows(await statRes.text()) : [];
-    setUploadStats(computeImportStats(logRows, tagesStatRows));
-  } catch (err) {
-    if (err.name !== 'AbortError') {
-      console.error('fetchImportStats() Fehler:', err);
-    }
-  } finally {
-    window.clearTimeout(timeoutId);
-    statsInFlightController = null;
-  }
-}
 
 function makeEmptyMap() {
   return columns.reduce((map, col) => {
@@ -469,8 +369,6 @@ window.addEventListener('DOMContentLoaded', () => {
   startTickerAnimation();
   scheduleNextFetch();
   fetchData();
-  fetchImportStats();
   setInterval(fetchData, FETCH_INTERVAL_MS);
-  setInterval(fetchImportStats, FETCH_INTERVAL_MS);
   setInterval(updateTimerDisplay, 1000);
 });
