@@ -2,42 +2,87 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta id="themeColorMeta" name="theme-color" content="#eef2f7" />
   <title>Dashboard – Aufträge</title>
-  <link rel="stylesheet" href="style.css?v=2">
+  <script>
+    (function () {
+      var THEME_KEY = 'svs-dashboard-theme';
+      var theme = 'light';
+      try {
+        var saved = localStorage.getItem(THEME_KEY);
+        if (saved === 'dark' || saved === 'light') theme = saved;
+      } catch (_) {
+        try {
+          var sessionSaved = sessionStorage.getItem(THEME_KEY);
+          if (sessionSaved === 'dark' || sessionSaved === 'light') theme = sessionSaved;
+        } catch (_) {}
+      }
+      document.documentElement.setAttribute('data-theme', theme);
+      document.documentElement.style.colorScheme = theme;
+      var meta = document.getElementById('themeColorMeta');
+      if (meta) meta.content = theme === 'dark' ? '#0b0f14' : '#eef2f7';
+      try {
+        var params = new URLSearchParams(window.location.search);
+        var kiosk = params.get('kiosk');
+        if (kiosk === '1' || kiosk === 'true') {
+          document.documentElement.setAttribute('data-kiosk', '1');
+        }
+      } catch (_) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css?v=25">
 </head>
-<body>
+<body class="dashboard">
 
-  <!-- Kopfzeile mit Logo und Ticker -->
-  <div class="top-bar">
-    <div class="logo-container">
+  <header class="app-header">
+    <div class="brand">
       <img src="Logo.png" alt="SV-Souleiman Logo" class="logo" />
     </div>
 
-    <div class="ticker-container">
-      <div class="ticker">
-        <span id="naechsteNummer"></span>
+    <div class="header-main">
+      <div class="ticker-container">
+        <div class="ticker">
+          <span id="naechsteNummer"></span>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Kanban-Board -->
-  <div class="board" id="board"></div>
+    <button type="button" id="themeToggle" class="theme-toggle" aria-label="Design umschalten" title="Dunkles Design">
+      <span class="theme-toggle-icon" aria-hidden="true">🌙</span>
+    </button>
+  </header>
 
-  <!-- Untere Leiste mit Legende und Timer -->
-  <div class="bottom-bar">
-    <div class="legend">
-      <span><span class="dot red"></span> Unvollständig</span>
-      <span><span class="dot yellow"></span> Zu prüfen</span>
-      <span><span class="dot green"></span> Geprüft</span>
+  <main class="app-main">
+    <div class="board" id="board"></div>
+
+    <div class="legend" aria-label="Legende">
+      <span class="legend-item"><span class="dot red"></span> Unvollständig</span>
+      <span class="legend-item"><span class="dot orange"></span> Vollständig</span>
+      <span class="legend-item"><span class="dot green"></span> Geprüft</span>
+      <span class="legend-item"><span class="dot unknown"></span> Unbekannt</span>
+      <span class="legend-item"><span class="dot aged"></span> ≥ 3 Tage</span>
     </div>
-<div id="openCountWidget" class="state-green" aria-label="Offene Akten">
-  <div class="chip"></div>
-  <div class="label">Offene Akten</div>
-  <div class="value">0</div>
-</div>
-    <div id="updateInfo" class="update-info"></div>
-  </div>
+  </main>
 
-<script src="script.js?v=26"></script>
+  <footer class="app-footer">
+    <div class="stats-strip" id="statsStrip">
+      <div class="stat-cell stat-cell-rb" id="rbCountWidget" aria-label="Offene RB">
+        <span class="stat-label">Offene RB</span>
+        <span class="stat-value" id="rbCountValue">–</span>
+      </div>
+      <div class="stat-cell stat-cell-open state-green" id="openCountWidget" aria-label="Offene Akten">
+        <span class="stat-label">Offene Akten</span>
+        <span class="stat-value value">0</span>
+      </div>
+      <div class="stat-cell stat-cell-sync" id="syncStatCell">
+        <span class="stat-label">Sync</span>
+        <span class="stat-value stat-value-text" id="uploadSyncValue">–</span>
+      </div>
+      <div class="stat-cell stat-cell-time" id="updateInfo"></div>
+    </div>
+  </footer>
+
+<script src="script.js?v=45"></script>
 </body>
 </html>

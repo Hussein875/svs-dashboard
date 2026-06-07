@@ -1,8 +1,13 @@
 // Polling and sheet configuration
 const FETCH_INTERVAL_MS = 60_000;
 const FETCH_TIMEOUT_MS = 25_000;
+const SCRIPT_STALE_MS = 15 * 60_000;
+const AGE_HINT_DAYS = 3;
 const SHEET_ID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+const IMPORT_LOG_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=A2:C`;
+const IMPORT_RUN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=F1`;
+const TAGES_STAT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=H2:J`;
 
 // Board configuration
 const columns = ['Eingang', 'Hadi', 'Ramazan', 'Robar', 'Osama', 'Geprüft'];
@@ -32,6 +37,197 @@ let nextFetchTime = null;
 let inFlightController = null;
 let lastFetchError = '';
 let openCountEl = null;
+let statsInFlightController = null;
+let importDateByAkte = new Map();
+let lastImportRunTime = null;
+let lastBoardData = [];
+let previousCardPositions = new Map();
+let knownAkten = new Set();
+let isFirstBoardRender = true;
+
+function todayDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function parseGvizRows(text) {
+  const json = parseGviz(text);
+  return Array.isArray(json?.table?.rows) ? json.table.rows : [];
+}
+
+function setUploadStats({ syncLabel, rbCount }) {
+  const syncEl = document.getElementById('uploadSyncValue');
+  const syncCell = document.getElementById('syncStatCell');
+
+  if (syncEl) syncEl.textContent = syncLabel ?? '–';
+
+  if (syncCell) {
+    syncCell.classList.remove('sync-ok', 'sync-open');
+    if (syncLabel === 'OK') syncCell.classList.add('sync-ok');
+    else if (syncLabel === 'Offen') syncCell.classList.add('sync-open');
+  }
+
+  setRbCount(rbCount);
+}
+
+function setRbCount(count) {
+  const widget = document.getElementById('rbCountWidget');
+  const valueEl = document.getElementById('rbCountValue');
+  if (!widget || !valueEl) return;
+
+  const n = Number.isFinite(Number(count)) ? Number(count) : null;
+  valueEl.textContent = n === null ? '–' : String(n);
+
+  widget.classList.remove('state-green', 'state-yellow', 'state-orange', 'state-burn');
+  if (n === null) widget.classList.add('state-green');
+  else if (n >= 15) widget.classList.add('state-burn');
+  else if (n >= 10) widget.classList.add('state-orange');
+  else if (n >= 5) widget.classList.add('state-yellow');
+  else widget.classList.add('state-green');
+
+  widget.title = n === null
+    ? 'Reparaturbestätigungen im Drive-Ordner'
+    : `Offene Reparaturbestätigungen: ${n}`;
+}
+
+function parseTagesStatRow(row) {
+  const cell = (idx) => String(row.c?.[idx]?.v ?? '').trim();
+
+  // Neues Format: Datum | Sync | RB_Offene
+  if (cell(1) === 'OK' || cell(1) === 'Offen') {
+    const rb = Number.parseInt(cell(2), 10);
+    return { syncLabel: cell(1), rbCount: Number.isFinite(rb) ? rb : null };
+  }
+
+  // Altes 6-Spalten-Format: Datum | Neu | Offen | Drive | Sync | RB
+  if (cell(4) === 'OK' || cell(4) === 'Offen') {
+    const rb = Number.parseInt(cell(5), 10);
+    return { syncLabel: cell(4), rbCount: Number.isFinite(rb) ? rb : null };
+  }
+
+  // Altes 5-Spalten-Format: Datum | Neu | Offen | Sync | RB
+  if (cell(3) === 'OK' || cell(3) === 'Offen') {
+    const rb = Number.parseInt(cell(4), 10);
+    return { syncLabel: cell(3), rbCount: Number.isFinite(rb) ? rb : null };
+  }
+
+  return { syncLabel: '–', rbCount: null };
+}
+
+function computeImportStats(tagesStatRows) {
+  const today = todayDateKey();
+
+  let syncLabel = '–';
+  let rbCount = null;
+  for (let i = tagesStatRows.length - 1; i >= 0; i -= 1) {
+    const date = String(tagesStatRows[i].c?.[0]?.v ?? '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date !== today) continue;
+    const parsed = parseTagesStatRow(tagesStatRows[i]);
+    syncLabel = parsed.syncLabel;
+    rbCount = parsed.rbCount;
+    break;
+  }
+
+  return { syncLabel, rbCount };
+}
+
+async function fetchImportStats() {
+  if (statsInFlightController) return;
+
+  statsInFlightController = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    if (statsInFlightController) statsInFlightController.abort();
+  }, FETCH_TIMEOUT_MS);
+
+  try {
+    const [logRes, statRes, runRes] = await Promise.all([
+      fetch(IMPORT_LOG_URL, { signal: statsInFlightController.signal, cache: 'no-store' }),
+      fetch(TAGES_STAT_URL, { signal: statsInFlightController.signal, cache: 'no-store' }),
+      fetch(IMPORT_RUN_URL, { signal: statsInFlightController.signal, cache: 'no-store' })
+    ]);
+
+    if (!logRes.ok && !statRes.ok && !runRes.ok) return;
+
+    const logRows = logRes.ok ? parseGvizRows(await logRes.text()) : [];
+    const tagesStatRows = statRes.ok ? parseGvizRows(await statRes.text()) : [];
+    const { dateByAkte } = parseImportLogData(logRows);
+    importDateByAkte = dateByAkte;
+
+    if (runRes.ok) {
+      const runJson = parseGviz(await runRes.text());
+      const runValue = runJson?.table?.rows?.[0]?.c?.[0]?.v;
+      lastImportRunTime = parseImportRunTime(runValue);
+    }
+    setUploadStats(computeImportStats(tagesStatRows));
+    if (lastBoardData.length) renderBoard(lastBoardData);
+    updateTimerDisplay();
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.error('fetchImportStats() Fehler:', err);
+    }
+  } finally {
+    window.clearTimeout(timeoutId);
+    statsInFlightController = null;
+  }
+}
+
+function extractAktenNummer(value) {
+  const match = String(value || '').match(/\d+/);
+  return match ? match[0] : '';
+}
+
+function parseImportRunTime(text) {
+  const value = String(text || '').trim();
+  if (!value) return null;
+
+  const dt = new Date(value.includes('T') ? value : value.replace(' ', 'T'));
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+function parseImportLogData(logRows) {
+  const dateByAkte = new Map();
+
+  logRows.forEach((row) => {
+    const date = String(row.c?.[0]?.v ?? '').trim();
+    const nummer = String(row.c?.[2]?.v ?? '').replace(/[^0-9]/g, '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !nummer) return;
+
+    const existing = dateByAkte.get(nummer);
+    if (!existing || date < existing) dateByAkte.set(nummer, date);
+  });
+
+  return { dateByAkte };
+}
+
+function getAgeDays(importDateStr) {
+  if (!importDateStr) return null;
+  const imported = new Date(`${importDateStr}T12:00:00`);
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  return Math.floor((today - imported) / 86_400_000);
+}
+
+function formatScriptStaleMessage(date) {
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 60) return `⚠ Skript seit ${minutes} Min nicht gelaufen`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `⚠ Skript seit ${hours} Std nicht gelaufen`;
+  const days = Math.floor(hours / 24);
+  return `⚠ Skript seit ${days} Tag${days === 1 ? '' : 'en'} nicht gelaufen`;
+}
+
+function isScriptStale(date) {
+  if (!date) return false;
+  return Date.now() - date.getTime() > SCRIPT_STALE_MS;
+}
+
+function isUnknownStatus(status) {
+  const normalized = String(status || '').trim().toLowerCase();
+  return normalized === 'unbekannt' || normalized === 'fehler beim auslesen';
+}
 
 function makeEmptyMap() {
   return columns.reduce((map, col) => {
@@ -69,64 +265,29 @@ function startTickerAnimation() {
 }
 
 function ensureOpenCountWidget() {
-  if (openCountEl) return openCountEl;
-
-  const allWidgets = document.querySelectorAll('#openCountWidget');
-  if (allWidgets.length > 1) {
-    const keep = Array.from(allWidgets).find((el) => el.closest('.bottom-bar')) || allWidgets[0];
-    allWidgets.forEach((el) => {
-      if (el !== keep) el.remove();
-    });
-  }
-
-  const existingWidgets = document.querySelectorAll('#openCountWidget');
-  const existing = Array.from(existingWidgets).find((el) => el.closest('.bottom-bar')) || existingWidgets[0];
+  const existing = document.getElementById('openCountWidget');
   if (existing) {
     openCountEl = existing;
-    return openCountEl;
+    return existing;
   }
-
-  const widget = document.createElement('div');
-  widget.id = 'openCountWidget';
-  widget.className = 'state-green';
-  widget.setAttribute('aria-label', 'Offene Akten');
-
-  const chip = document.createElement('div');
-  chip.className = 'chip';
-  const label = document.createElement('div');
-  label.className = 'label';
-  label.textContent = 'Offene Akten';
-  const value = document.createElement('div');
-  value.className = 'value';
-  value.textContent = '0';
-
-  widget.appendChild(chip);
-  widget.appendChild(label);
-  widget.appendChild(value);
-
-  const bottomBar = document.querySelector('.bottom-bar');
-  const updateInfo = document.getElementById('updateInfo');
-  if (bottomBar && updateInfo) bottomBar.insertBefore(widget, updateInfo);
-  else if (bottomBar) bottomBar.appendChild(widget);
-  else document.body.appendChild(widget);
-
-  openCountEl = widget;
-  return widget;
+  return null;
 }
 
 function setOpenCount(count) {
   const widget = ensureOpenCountWidget();
+  if (!widget) return;
+
   const valueEl = widget.querySelector('.value');
   if (valueEl) valueEl.textContent = String(count ?? 0);
 
-  widget.classList.remove('state-green', 'state-yellow', 'state-orange', 'state-red', 'state-burn');
+  widget.classList.remove('state-green', 'state-yellow', 'state-orange', 'state-burn');
   const n = Number(count) || 0;
   if (n >= 30) widget.classList.add('state-burn');
   else if (n >= 20) widget.classList.add('state-orange');
   else if (n >= 10) widget.classList.add('state-yellow');
   else widget.classList.add('state-green');
 
-  widget.title = `Offene / nicht versendete Akten: ${n}`;
+  widget.title = `Offene Akten: ${n}`;
 }
 
 function extractAktenzeichen(text) {
@@ -229,8 +390,10 @@ async function fetchData() {
     setTickerText(`💥 Aktuelle Nummer: ${nextNumber} 🚗`);
 
     renderBoard(cleanedRows);
+    lastBoardData = cleanedRows;
     lastFetchTime = new Date();
     lastFetchError = '';
+    await fetchImportStats();
   } catch (err) {
     if (err.name === 'AbortError' && didTimeout) {
       lastFetchError = `Timeout nach ${Math.round(FETCH_TIMEOUT_MS / 1000)}s`;
@@ -264,24 +427,42 @@ function updateTimerDisplay() {
   const minutesLeft = Math.floor(diffMs / 60_000);
   const secondsLeft = Math.floor((diffMs % 60_000) / 1000);
 
-  el.className = 'update-info';
+  el.className = 'stat-cell stat-cell-time';
   if (diffMs > FETCH_INTERVAL_MS * 0.5) el.classList.add('green');
   else if (diffMs > FETCH_INTERVAL_MS * 0.2) el.classList.add('orange');
   else el.classList.add('red');
 
-  let html = `⏱️ <b>Letztes Update:</b> ${escapeHtml(lastUpdateText)} &nbsp;|&nbsp; 🔄 <b>Nächstes in:</b> ${minutesLeft}m ${secondsLeft}s`;
-  if (lastFetchError) {
-    html += ` &nbsp;|&nbsp; ⚠️ <b>Fehler:</b> ${escapeHtml(lastFetchError)}`;
-    el.classList.remove('green');
+  let html = `${escapeHtml(lastUpdateText)} · ↻ ${minutesLeft}:${String(secondsLeft).padStart(2, '0')}`;
+  if (isScriptStale(lastImportRunTime)) {
+    html += ` · ${escapeHtml(formatScriptStaleMessage(lastImportRunTime))}`;
+    el.classList.remove('green', 'orange');
     el.classList.add('red');
   }
-  el.innerHTML = html;
+  if (lastFetchError) {
+    html += ` · ⚠ ${escapeHtml(lastFetchError)}`;
+    el.classList.remove('green', 'orange');
+    el.classList.add('red');
+  }
+  el.textContent = html;
 }
 
-function renderBoard(data) {
-  const board = document.getElementById('board');
-  if (!board) return;
+const columnClassMap = {
+  Eingang: 'column-eingang',
+  Hadi: 'column-hadi',
+  Ramazan: 'column-ramazan',
+  Robar: 'column-robar',
+  Osama: 'column-osama',
+  'Geprüft': 'column-gepruft'
+};
 
+function applyCardStatus(card, status) {
+  card.classList.remove('status-geprueft', 'status-unvollstaendig', 'status-vollstaendig');
+  if (isGeprueftStatus(status)) card.classList.add('status-geprueft');
+  else if (status.includes('unvollständig')) card.classList.add('status-unvollstaendig');
+  else if (status.includes('vollständig')) card.classList.add('status-vollstaendig');
+}
+
+function buildBoardMap(data) {
   const map = makeEmptyMap();
 
   data.forEach((row) => {
@@ -315,17 +496,54 @@ function renderBoard(data) {
     });
   }
 
+  return map;
+}
+
+function applyCardHighlight(card, { nummer, col }) {
+  const isNew = !knownAkten.has(nummer);
+  const prevCol = previousCardPositions.get(nummer);
+  const moved = !isFirstBoardRender && prevCol && prevCol !== col;
+
+  if (isNew && col === 'Eingang') {
+    card.classList.add('card-new');
+  } else if (moved) {
+    card.classList.add('card-moved');
+  }
+
+  knownAkten.add(nummer);
+}
+
+function renderBoard(data) {
+  const board = document.getElementById('board');
+  if (!board) return;
+
+  const map = buildBoardMap(data);
+
   board.textContent = '';
   const fragment = document.createDocumentFragment();
 
   columns.forEach((col) => {
     const colDiv = document.createElement('div');
-    colDiv.className = 'column';
+    colDiv.className = `column ${columnClassMap[col] || ''}`;
+
+    const count = map[col].length;
+
+    const header = document.createElement('div');
+    header.className = 'column-header';
 
     const title = document.createElement('h2');
-    const count = map[col].length;
-    title.textContent = count > 0 ? `${col} (${count})` : col;
-    colDiv.appendChild(title);
+    title.textContent = col;
+
+    const countBadge = document.createElement('span');
+    countBadge.className = 'column-count';
+    countBadge.textContent = String(count);
+
+    header.appendChild(title);
+    header.appendChild(countBadge);
+    colDiv.appendChild(header);
+
+    const cardsWrap = document.createElement('div');
+    cardsWrap.className = 'column-cards';
 
     map[col].forEach((item) => {
       const { nummer, status, bearbeiter } = item;
@@ -333,18 +551,33 @@ function renderBoard(data) {
 
       const card = document.createElement('div');
       card.className = 'card';
-      card.textContent = nummer;
 
-      if (isGeprueftStatus(status)) {
-        card.style.backgroundColor = '#13e339ff';
-        card.style.color = 'white';
-      } else if (status.includes('unvollständig')) {
-        card.style.backgroundColor = '#e31313ff';
-        card.style.color = 'white';
-      } else if (status.includes('vollständig')) {
-        card.style.backgroundColor = '#ff7300ff';
-        card.style.color = 'white';
+      applyCardHighlight(card, { nummer, col });
+
+      const nummerEl = document.createElement('div');
+      nummerEl.className = 'card-number';
+      nummerEl.textContent = nummer;
+      card.appendChild(nummerEl);
+
+      const aktenNummer = extractAktenNummer(nummer);
+      const importDate = aktenNummer ? importDateByAkte.get(aktenNummer) : null;
+      const ageDays = getAgeDays(importDate);
+
+      if (ageDays !== null && ageDays >= AGE_HINT_DAYS) {
+        card.classList.add('card-aged');
+        card.title = ageDays === 1 ? 'Seit 1 Tag im System' : `Seit ${ageDays} Tagen im System`;
       }
+
+      if (isUnknownStatus(status)) {
+        card.classList.add('card-unknown');
+        const unknownBadge = document.createElement('div');
+        unknownBadge.className = 'unknown-badge';
+        unknownBadge.textContent = '?';
+        unknownBadge.title = 'Status unbekannt – UX-Sync prüfen';
+        card.appendChild(unknownBadge);
+      }
+
+      applyCardStatus(card, status);
 
       const externalBadge = resolveExternalBadge(bearbeiter);
       if (externalBadge) {
@@ -355,16 +588,149 @@ function renderBoard(data) {
         card.appendChild(badge);
       }
 
-      colDiv.appendChild(card);
+      cardsWrap.appendChild(card);
     });
 
+    colDiv.appendChild(cardsWrap);
     fragment.appendChild(colDiv);
   });
 
   board.appendChild(fragment);
+
+  previousCardPositions = new Map();
+  columns.forEach((col) => {
+    map[col].forEach((item) => previousCardPositions.set(item.nummer, col));
+  });
+  isFirstBoardRender = false;
+}
+
+const THEME_STORAGE_KEY = 'svs-dashboard-theme';
+
+function readStoredTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved === 'dark' || saved === 'light') return saved;
+  } catch (_) {
+    /* localStorage blockiert (Privatmodus / iframe) */
+  }
+  try {
+    const saved = sessionStorage.getItem(THEME_STORAGE_KEY);
+    if (saved === 'dark' || saved === 'light') return saved;
+  } catch (_) {
+    /* sessionStorage blockiert */
+  }
+  return null;
+}
+
+function storeTheme(theme) {
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+    return;
+  } catch (_) {
+    /* Fallback wenn localStorage nicht verfügbar */
+  }
+  try {
+    sessionStorage.setItem(THEME_STORAGE_KEY, theme);
+  } catch (_) {
+    /* Speichern optional */
+  }
+}
+
+function applyTheme(theme) {
+  const isDark = theme === 'dark';
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+
+  const meta = document.getElementById('themeColorMeta');
+  if (meta) meta.content = isDark ? '#0b0f14' : '#eef2f7';
+
+  const btn = document.getElementById('themeToggle');
+  if (!btn) return;
+
+  const icon = btn.querySelector('.theme-toggle-icon');
+  if (icon) icon.textContent = isDark ? '☀️' : '🌙';
+  btn.title = isDark ? 'Helles Design' : 'Dunkles Design';
+  btn.setAttribute('aria-label', isDark ? 'Helles Design aktivieren' : 'Dunkles Design aktivieren');
+}
+
+function initTheme() {
+  const stored = readStoredTheme();
+  const current = document.documentElement.getAttribute('data-theme');
+  applyTheme(stored || (current === 'dark' ? 'dark' : 'light'));
+}
+
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const next = isDark ? 'light' : 'dark';
+  storeTheme(next);
+  applyTheme(next);
+}
+
+function bindThemeToggle() {
+  const themeBtn = document.getElementById('themeToggle');
+  if (!themeBtn || themeBtn.dataset.bound === '1') return;
+  themeBtn.dataset.bound = '1';
+
+  themeBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    toggleTheme();
+  });
+}
+
+function isKioskMode() {
+  return document.documentElement.getAttribute('data-kiosk') === '1';
+}
+
+function initKioskMode() {
+  if (!isKioskMode()) return;
+
+  document.body.classList.add('kiosk');
+  document.title = 'SVS Dashboard';
+
+  const themeBtn = document.getElementById('themeToggle');
+  if (themeBtn) themeBtn.hidden = true;
+
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  let cursorTimer;
+  const hideCursor = () => document.body.classList.add('kiosk-idle');
+  const showCursor = () => {
+    document.body.classList.remove('kiosk-idle');
+    window.clearTimeout(cursorTimer);
+    cursorTimer = window.setTimeout(hideCursor, 4000);
+  };
+  document.addEventListener('mousemove', showCursor, { passive: true });
+  cursorTimer = window.setTimeout(hideCursor, 4000);
+
+  tryEnterFullscreen();
+  requestWakeLock();
+}
+
+async function tryEnterFullscreen() {
+  try {
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+      await document.documentElement.requestFullscreen();
+    }
+  } catch (_) {
+    /* Browser blockiert Vollbild ohne Nutzeraktion — auf dem Pi mit Chromium --kiosk ok */
+  }
+}
+
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      await navigator.wakeLock.request('screen');
+    }
+  } catch (_) {
+    /* Optional — nicht überall verfügbar */
+  }
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  initKioskMode();
+  initTheme();
+  bindThemeToggle();
+
   ensureOpenCountWidget();
   startTickerAnimation();
   scheduleNextFetch();
