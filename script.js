@@ -57,16 +57,28 @@ function parseGvizRows(text) {
   return Array.isArray(json?.table?.rows) ? json.table.rows : [];
 }
 
+function normalizeSyncLabel(raw) {
+  const label = String(raw ?? '').trim();
+  if (['OK', 'Vollständig', 'Komplett'].includes(label)) return 'OK';
+  if (['Offen', 'Fehlt im Sheet', 'Fehlt', 'Missing', 'Gap', 'NO'].includes(label)) return 'NO';
+  return label || '–';
+}
+
+function isSyncOkLabel(label) {
+  return label === 'OK';
+}
+
 function setUploadStats({ syncLabel, rbCount }) {
   const syncEl = document.getElementById('uploadSyncValue');
   const syncCell = document.getElementById('syncStatCell');
+  const displayLabel = normalizeSyncLabel(syncLabel);
 
-  if (syncEl) syncEl.textContent = syncLabel ?? '–';
+  if (syncEl) syncEl.textContent = displayLabel;
 
   if (syncCell) {
     syncCell.classList.remove('sync-ok', 'sync-open');
-    if (syncLabel === 'OK') syncCell.classList.add('sync-ok');
-    else if (syncLabel === 'Offen') syncCell.classList.add('sync-open');
+    if (isSyncOkLabel(displayLabel)) syncCell.classList.add('sync-ok');
+    else if (displayLabel === 'NO') syncCell.classList.add('sync-open');
   }
 
   setRbCount(rbCount);
@@ -95,20 +107,20 @@ function setRbCount(count) {
 function parseTagesStatRow(row) {
   const cell = (idx) => String(row.c?.[idx]?.v ?? '').trim();
 
-  // Neues Format: Datum | Sync | RB_Offene
-  if (cell(1) === 'OK' || cell(1) === 'Offen') {
+  // Neues Format: Datum | Drive-Abgleich | RB_Offene
+  if (['OK', 'Offen', 'Vollständig', 'Fehlt im Sheet', 'Komplett', 'Fehlt', 'Missing', 'Gap', 'NO'].includes(cell(1))) {
     const rb = Number.parseInt(cell(2), 10);
     return { syncLabel: cell(1), rbCount: Number.isFinite(rb) ? rb : null };
   }
 
   // Altes 6-Spalten-Format: Datum | Neu | Offen | Drive | Sync | RB
-  if (cell(4) === 'OK' || cell(4) === 'Offen') {
+  if (['OK', 'Offen', 'Vollständig', 'Fehlt im Sheet', 'Komplett', 'Fehlt', 'Missing', 'Gap', 'NO'].includes(cell(4))) {
     const rb = Number.parseInt(cell(5), 10);
     return { syncLabel: cell(4), rbCount: Number.isFinite(rb) ? rb : null };
   }
 
   // Altes 5-Spalten-Format: Datum | Neu | Offen | Sync | RB
-  if (cell(3) === 'OK' || cell(3) === 'Offen') {
+  if (['OK', 'Offen', 'Vollständig', 'Fehlt im Sheet', 'Komplett', 'Fehlt', 'Missing', 'Gap', 'NO'].includes(cell(3))) {
     const rb = Number.parseInt(cell(4), 10);
     return { syncLabel: cell(3), rbCount: Number.isFinite(rb) ? rb : null };
   }
