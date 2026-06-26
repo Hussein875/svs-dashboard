@@ -31,7 +31,7 @@
       } catch (_) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=25">
+  <link rel="stylesheet" href="style.css?v=27">
 </head>
 <body class="dashboard">
 
@@ -47,6 +47,10 @@
         </div>
       </div>
     </div>
+
+    <button type="button" id="adminToggle" class="admin-toggle" hidden aria-label="Admin entsperren" title="Admin entsperren">
+      <span class="admin-toggle-icon" aria-hidden="true">🔒</span>
+    </button>
 
     <button type="button" id="themeToggle" class="theme-toggle" aria-label="Design umschalten" title="Dunkles Design">
       <span class="theme-toggle-icon" aria-hidden="true">🌙</span>
@@ -83,6 +87,30 @@
     </div>
   </footer>
 
-<script src="script.js?v=49"></script>
+  <div id="pinModal" class="pin-modal" hidden>
+    <div class="pin-modal-dialog" role="dialog" aria-labelledby="pinModalTitle" aria-modal="true">
+      <h2 id="pinModalTitle" class="pin-modal-title">Admin-PIN</h2>
+      <form id="pinForm" class="pin-form">
+        <input
+          id="pinInput"
+          class="pin-input"
+          type="password"
+          inputmode="numeric"
+          pattern="\d{4}"
+          maxlength="4"
+          autocomplete="off"
+          placeholder="••••"
+          aria-label="4-stellige PIN"
+        />
+        <p id="pinError" class="pin-error" aria-live="polite"></p>
+        <div class="pin-actions">
+          <button type="button" id="pinCancel" class="pin-btn pin-btn-secondary">Abbrechen</button>
+          <button type="submit" class="pin-btn pin-btn-primary">Entsperren</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script src="script.js?v=55"></script>
 </body>
 </html>

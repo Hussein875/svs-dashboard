@@ -9,6 +9,27 @@ const IMPORT_LOG_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/
 const IMPORT_RUN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=F1`;
 const TAGES_STAT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=H2:J`;
 
+const ADMIN_TOKEN_KEY = 'svs-assign-token';
+const ASSIGN_COLUMNS = ['Hadi', 'Ramazan', 'Robar'];
+
+const DEFAULT_ASSIGN_API_URL = 'https://assign.69-62-113-32.sslip.io';
+
+function resolveAssignApiUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const fromQuery = params.get('assignApi');
+    if (fromQuery) return fromQuery.replace(/\/+$/, '');
+  } catch (_) {
+    /* URLSearchParams nicht verfügbar */
+  }
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return DEFAULT_ASSIGN_API_URL;
+  }
+  return DEFAULT_ASSIGN_API_URL;
+}
+
+const ASSIGN_API_URL = resolveAssignApiUrl();
+
 // Board configuration
 const columns = ['Eingang', 'Hadi', 'Ramazan', 'Robar', 'Osama', 'Geprüft'];
 const workerColumnAliases = new Map([
@@ -18,6 +39,7 @@ const workerColumnAliases = new Map([
   ['ramazan dag', 'Ramazan'],
   ['robar', 'Robar'],
   ['robar kassem', 'Robar'],
+  ['robar kassam', 'Robar'],
   ['osama', 'Osama'],
   ['osama sleiman', 'Osama'],
   ['osama souleiman', 'Osama']
@@ -44,6 +66,366 @@ let lastBoardData = [];
 let previousCardPositions = new Map();
 let knownAkten = new Set();
 let isFirstBoardRender = true;
+let adminUnlocked = false;
+let pinSubmitInFlight = false;
+let assignInFlight = false;
+
+function getAdminToken() {
+  try {
+    return sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function setAdminToken(token) {
+  try {
+    if (token) sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+    else sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+  } catch (_) {
+    /* sessionStorage blockiert */
+  }
+}
+
+function isAdminModeAvailable() {
+  return !isKioskMode() && Boolean(ASSIGN_API_URL);
+}
+
+function updateAdminUi() {
+  const btn = document.getElementById('adminToggle');
+  if (!btn) return;
+
+  if (!isAdminModeAvailable()) {
+    btn.hidden = true;
+    adminUnlocked = false;
+    return;
+  }
+
+  btn.hidden = false;
+  btn.classList.toggle('admin-unlocked', adminUnlocked);
+  btn.title = adminUnlocked ? 'Admin aktiv – sperren' : 'Admin entsperren';
+  btn.setAttribute('aria-label', adminUnlocked ? 'Admin sperren' : 'Admin entsperren');
+  const icon = btn.querySelector('.admin-toggle-icon');
+  if (icon) icon.textContent = adminUnlocked ? '🔓' : '🔒';
+}
+
+function showPinModal() {
+  const modal = document.getElementById('pinModal');
+  const input = document.getElementById('pinInput');
+  const errorEl = document.getElementById('pinError');
+  if (!modal || !input) return;
+
+  input.value = '';
+  if (errorEl) errorEl.textContent = '';
+  modal.hidden = false;
+  input.focus();
+}
+
+function hidePinModal() {
+  const modal = document.getElementById('pinModal');
+  if (modal) modal.hidden = true;
+}
+
+async function authenticateAdmin(pin) {
+  const res = await fetch(`${ASSIGN_API_URL}/api/auth`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pin }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.token) {
+    throw new Error(data.error || `HTTP ${res.status}`);
+  }
+  setAdminToken(data.token);
+  adminUnlocked = true;
+  updateAdminUi();
+  if (lastBoardData.length) renderBoard(lastBoardData);
+}
+
+async function submitPin(event) {
+  if (event) event.preventDefault();
+  if (pinSubmitInFlight) return;
+
+  const input = document.getElementById('pinInput');
+  const errorEl = document.getElementById('pinError');
+  const pin = String(input?.value ?? '').replace(/\D/g, '').slice(0, 4);
+  if (input) input.value = pin;
+
+  if (!/^\d{4}$/.test(pin)) {
+    if (errorEl) errorEl.textContent = 'Bitte 4 Ziffern eingeben';
+    return;
+  }
+
+  pinSubmitInFlight = true;
+  try {
+    await authenticateAdmin(pin);
+    hidePinModal();
+  } catch (err) {
+    const msg = String(err?.message || '');
+    if (msg === 'Load failed' || msg === 'Failed to fetch') {
+      if (errorEl) {
+        errorEl.textContent = `API nicht erreichbar (${ASSIGN_API_URL}). Läuft assign-server lokal?`;
+      }
+      return;
+    }
+    if (errorEl) errorEl.textContent = msg || 'Anmeldung fehlgeschlagen';
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+  } finally {
+    pinSubmitInFlight = false;
+  }
+}
+
+function onPinInput(event) {
+  const input = event.target;
+  const errorEl = document.getElementById('pinError');
+  const pin = String(input?.value ?? '').replace(/\D/g, '').slice(0, 4);
+  if (input.value !== pin) input.value = pin;
+  if (errorEl) errorEl.textContent = '';
+
+  if (pin.length === 4) {
+    submitPin();
+  }
+}
+
+function lockAdmin() {
+  setAdminToken('');
+  adminUnlocked = false;
+  updateAdminUi();
+  if (lastBoardData.length) renderBoard(lastBoardData);
+}
+
+function bindAdminControls() {
+  const btn = document.getElementById('adminToggle');
+  const modal = document.getElementById('pinModal');
+  const form = document.getElementById('pinForm');
+  const cancelBtn = document.getElementById('pinCancel');
+  const pinInput = document.getElementById('pinInput');
+
+  if (btn && btn.dataset.bound !== '1') {
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', () => {
+      if (adminUnlocked) lockAdmin();
+      else showPinModal();
+    });
+  }
+
+  if (form && form.dataset.bound !== '1') {
+    form.dataset.bound = '1';
+    form.addEventListener('submit', submitPin);
+  }
+
+  if (pinInput && pinInput.dataset.bound !== '1') {
+    pinInput.dataset.bound = '1';
+    pinInput.addEventListener('input', onPinInput);
+  }
+
+  if (cancelBtn && cancelBtn.dataset.bound !== '1') {
+    cancelBtn.dataset.bound = '1';
+    cancelBtn.addEventListener('click', hidePinModal);
+  }
+
+  if (modal && modal.dataset.bound !== '1') {
+    modal.dataset.bound = '1';
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) hidePinModal();
+    });
+  }
+
+  if (getAdminToken()) {
+    adminUnlocked = true;
+  }
+  updateAdminUi();
+}
+
+function showAssignFeedback(card, state, message) {
+  card.classList.remove('card-assign-pending', 'card-assign-ok', 'card-assign-error');
+  card.classList.add(`card-assign-${state}`);
+  if (message) card.title = message;
+  window.setTimeout(() => {
+    card.classList.remove('card-assign-pending', 'card-assign-ok', 'card-assign-error');
+  }, 2200);
+}
+
+function columnToBearbeiter(column) {
+  return column === 'Eingang' ? '' : column;
+}
+
+function normalizeAkteKey(value) {
+  return String(value || '').replace(/[^0-9]/g, '');
+}
+
+function applyOptimisticAssign(akte, column) {
+  const targetKey = normalizeAkteKey(akte);
+  if (!targetKey || !lastBoardData.length) return null;
+
+  const bearbeiter = columnToBearbeiter(column);
+  const sheetBearbeiter = bearbeiter === '' ? '' : ({
+    Hadi: 'Hadi Issa',
+    Ramazan: 'Ramazan Dag',
+    Robar: 'Robar Kassem',
+    Osama: 'Osama Sleiman',
+  }[bearbeiter] || bearbeiter);
+  const snapshot = lastBoardData.map((row) => ({ ...row }));
+  let found = false;
+
+  lastBoardData = lastBoardData.map((row) => {
+    if (normalizeAkteKey(row.Eingang) !== targetKey) return row;
+    found = true;
+    return { ...row, Bearbeiter: sheetBearbeiter };
+  });
+
+  if (!found) return null;
+  renderBoard(lastBoardData);
+  return snapshot;
+}
+
+function revertOptimisticAssign(snapshot) {
+  if (!snapshot) return;
+  lastBoardData = snapshot;
+  renderBoard(lastBoardData);
+}
+
+async function assignAkteToColumn(akte, column, card) {
+  if (!adminUnlocked || assignInFlight) return;
+  const token = getAdminToken();
+  if (!token) {
+    lockAdmin();
+    showPinModal();
+    return;
+  }
+
+  assignInFlight = true;
+  const snapshot = applyOptimisticAssign(akte, column);
+  showAssignFeedback(card, 'pending', 'Zuweisung läuft…');
+
+  try {
+    const res = await fetch(`${ASSIGN_API_URL}/api/assign`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ akte, column }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (res.status === 401) {
+      revertOptimisticAssign(snapshot);
+      lockAdmin();
+      showPinModal();
+      showAssignFeedback(card, 'error', 'Session abgelaufen');
+      return;
+    }
+
+    if (!res.ok || (!data.ok && !data.sheetUpdated)) {
+      revertOptimisticAssign(snapshot);
+      showAssignFeedback(card, 'error', data.error || `HTTP ${res.status}`);
+      return;
+    }
+
+    const uxHint = data.uxPending ? ' · UX läuft…' : '';
+    showAssignFeedback(card, 'ok', `${akte} → ${column}${uxHint}`);
+    fetchData({ force: true });
+  } catch (err) {
+    revertOptimisticAssign(snapshot);
+    showAssignFeedback(card, 'error', err.message || 'Netzwerkfehler');
+  } finally {
+    assignInFlight = false;
+  }
+}
+
+function isManualAssignStatus(status) {
+  const s = String(status || '').toLowerCase().trim();
+  return !isGeprueftStatus(s) && !s.includes('vollständig');
+}
+
+function bindCardDrag(card, akte, status) {
+  if (!adminUnlocked || !isManualAssignStatus(status)) {
+    card.draggable = false;
+    card.classList.remove('card-draggable');
+    return;
+  }
+
+  card.draggable = true;
+  card.classList.add('card-draggable');
+  card.dataset.akte = akte;
+
+  if (card.dataset.dragBound === '1') return;
+  card.dataset.dragBound = '1';
+
+  card.addEventListener('dragstart', (event) => {
+    event.dataTransfer.setData('text/plain', akte);
+    event.dataTransfer.setData('application/x-svs-akte', akte);
+    event.dataTransfer.effectAllowed = 'move';
+    card.classList.add('card-dragging');
+  });
+
+  card.addEventListener('dragend', () => {
+    card.classList.remove('card-dragging');
+    document.querySelectorAll('.column-drop-active').forEach((el) => {
+      el.classList.remove('column-drop-active');
+    });
+  });
+
+  card.addEventListener('dragover', (event) => {
+    if (!adminUnlocked) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  });
+}
+
+function bindColumnDrop(cardsWrap, column) {
+  if (!ASSIGN_COLUMNS.includes(column)) return;
+
+  cardsWrap.dataset.dropColumn = column;
+
+  if (cardsWrap.dataset.dropBound === '1') return;
+  cardsWrap.dataset.dropBound = '1';
+
+  const markActive = () => cardsWrap.classList.add('column-drop-active');
+  const clearActive = () => cardsWrap.classList.remove('column-drop-active');
+
+  cardsWrap.addEventListener('dragenter', (event) => {
+    if (!adminUnlocked) return;
+    event.preventDefault();
+    markActive();
+  });
+
+  cardsWrap.addEventListener('dragover', (event) => {
+    if (!adminUnlocked) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    markActive();
+  });
+
+  cardsWrap.addEventListener('dragleave', (event) => {
+    if (!cardsWrap.contains(event.relatedTarget)) clearActive();
+  });
+
+  cardsWrap.addEventListener('drop', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    clearActive();
+    if (!adminUnlocked) return;
+
+    const akte = event.dataTransfer.getData('application/x-svs-akte')
+      || event.dataTransfer.getData('text/plain');
+    if (!akte) return;
+
+    const card = document.querySelector(`.card[data-akte="${CSS.escape(akte)}"]`);
+    if (!card) return;
+
+    const sourceWrap = card.closest('.column-cards');
+    if (sourceWrap && sourceWrap !== cardsWrap) {
+      cardsWrap.appendChild(card);
+    }
+
+    assignAkteToColumn(akte, column, card);
+  });
+}
 
 function todayDateKey(date = new Date()) {
   const year = date.getFullYear();
@@ -360,8 +742,13 @@ function scheduleNextFetch() {
   nextFetchTime = new Date(Date.now() + FETCH_INTERVAL_MS);
 }
 
-async function fetchData() {
-  if (inFlightController) return;
+async function fetchData({ force = false } = {}) {
+  if (inFlightController && !force) return;
+
+  if (force && inFlightController) {
+    inFlightController.abort();
+    inFlightController = null;
+  }
 
   inFlightController = new AbortController();
   let didTimeout = false;
@@ -371,7 +758,8 @@ async function fetchData() {
   }, FETCH_TIMEOUT_MS);
 
   try {
-    const res = await fetch(SHEET_URL, {
+    const sheetUrl = force ? `${SHEET_URL}&_=${Date.now()}` : SHEET_URL;
+    const res = await fetch(sheetUrl, {
       signal: inFlightController.signal,
       cache: 'no-store'
     });
@@ -486,7 +874,7 @@ function buildBoardMap(data) {
       return;
     }
 
-    if (status === 'vollständig') {
+    if (status.includes('vollständig')) {
       map.Osama.push(akte);
       return;
     }
@@ -537,6 +925,7 @@ function renderBoard(data) {
   columns.forEach((col) => {
     const colDiv = document.createElement('div');
     colDiv.className = `column ${columnClassMap[col] || ''}`;
+    colDiv.dataset.column = col;
 
     const count = map[col].length;
 
@@ -556,6 +945,10 @@ function renderBoard(data) {
 
     const cardsWrap = document.createElement('div');
     cardsWrap.className = 'column-cards';
+    if (ASSIGN_COLUMNS.includes(col)) {
+      cardsWrap.classList.add('column-assignable');
+    }
+    bindColumnDrop(cardsWrap, col);
 
     map[col].forEach((item) => {
       const { nummer, status, bearbeiter } = item;
@@ -563,6 +956,7 @@ function renderBoard(data) {
 
       const card = document.createElement('div');
       card.className = 'card';
+      bindCardDrag(card, nummer, status);
 
       applyCardHighlight(card, { nummer, col });
 
@@ -702,6 +1096,9 @@ function initKioskMode() {
   const themeBtn = document.getElementById('themeToggle');
   if (themeBtn) themeBtn.hidden = true;
 
+  const adminBtn = document.getElementById('adminToggle');
+  if (adminBtn) adminBtn.hidden = true;
+
   document.addEventListener('contextmenu', (e) => e.preventDefault());
 
   let cursorTimer;
@@ -742,6 +1139,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initKioskMode();
   initTheme();
   bindThemeToggle();
+  bindAdminControls();
 
   ensureOpenCountWidget();
   startTickerAnimation();
