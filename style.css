@@ -355,6 +355,7 @@ html[data-theme="dark"] .logo {
 .column-hadi     { --col-accent: #6366f1; }
 .column-ramazan  { --col-accent: #8b5cf6; }
 .column-robar    { --col-accent: #06b6d4; }
+.column-jad      { --col-accent: #10b981; }
 .column-osama    { --col-accent: #f59e0b; }
 .column-gepruft  { --col-accent: #22c55e; }
 
