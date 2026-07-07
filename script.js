@@ -10,7 +10,7 @@ const IMPORT_RUN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/
 const TAGES_STAT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=H2:J`;
 
 const ADMIN_TOKEN_KEY = 'svs-assign-token';
-const ASSIGN_COLUMNS = ['Hadi', 'Ramazan', 'Robar'];
+const ASSIGN_COLUMNS = ['Hadi', 'Ramazan', 'Robar', 'Jad'];
 
 const DEFAULT_ASSIGN_API_URL = 'https://assign.69-62-113-32.sslip.io';
 
@@ -31,7 +31,7 @@ function resolveAssignApiUrl() {
 const ASSIGN_API_URL = resolveAssignApiUrl();
 
 // Board configuration
-const columns = ['Eingang', 'Hadi', 'Ramazan', 'Robar', 'Osama', 'Geprüft'];
+const columns = ['Eingang', 'Hadi', 'Ramazan', 'Robar', 'Jad', 'Osama', 'Geprüft'];
 const workerColumnAliases = new Map([
   ['hadi', 'Hadi'],
   ['hadi issa', 'Hadi'],
@@ -40,6 +40,7 @@ const workerColumnAliases = new Map([
   ['robar', 'Robar'],
   ['robar kassem', 'Robar'],
   ['robar kassam', 'Robar'],
+  ['jad', 'Jad'],
   ['osama', 'Osama'],
   ['osama sleiman', 'Osama'],
   ['osama souleiman', 'Osama']
@@ -266,6 +267,7 @@ function applyOptimisticAssign(akte, column) {
     Hadi: 'Hadi Issa',
     Ramazan: 'Ramazan Dag',
     Robar: 'Robar Kassem',
+    Jad: 'Jad',
     Osama: 'Osama Sleiman',
   }[bearbeiter] || bearbeiter);
   const snapshot = lastBoardData.map((row) => ({ ...row }));
@@ -851,6 +853,7 @@ const columnClassMap = {
   Hadi: 'column-hadi',
   Ramazan: 'column-ramazan',
   Robar: 'column-robar',
+  Jad: 'column-jad',
   Osama: 'column-osama',
   'Geprüft': 'column-gepruft'
 };
