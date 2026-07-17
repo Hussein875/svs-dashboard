@@ -341,7 +341,7 @@ async function assignAkteToColumn(akte, column, card) {
 
 function isManualAssignStatus(status) {
   const s = String(status || '').toLowerCase().trim();
-  return !isGeprueftStatus(s) && !s.includes('vollständig');
+  return !isGeprueftStatus(s) && !isVollstaendigStatus(s);
 }
 
 function bindCardDrag(card, akte, status) {
@@ -703,6 +703,15 @@ function isGeprueftStatus(status) {
   return /^geprüft\s*(o|1|2|hj|hk)$/i.test(status);
 }
 
+function isUnvollstaendigStatus(status) {
+  return String(status || '').toLowerCase().includes('unvollständig');
+}
+
+function isVollstaendigStatus(status) {
+  const s = String(status || '').toLowerCase();
+  return s.includes('vollständig') && !s.includes('unvollständig');
+}
+
 function normalizeWorkerName(rawValue) {
   return String(rawValue || '')
     .replace(/\s+/g, ' ')
@@ -861,8 +870,8 @@ const columnClassMap = {
 function applyCardStatus(card, status) {
   card.classList.remove('status-geprueft', 'status-unvollstaendig', 'status-vollstaendig');
   if (isGeprueftStatus(status)) card.classList.add('status-geprueft');
-  else if (status.includes('unvollständig')) card.classList.add('status-unvollstaendig');
-  else if (status.includes('vollständig')) card.classList.add('status-vollstaendig');
+  else if (isUnvollstaendigStatus(status)) card.classList.add('status-unvollstaendig');
+  else if (isVollstaendigStatus(status)) card.classList.add('status-vollstaendig');
 }
 
 function buildBoardMap(data) {
@@ -877,7 +886,8 @@ function buildBoardMap(data) {
       return;
     }
 
-    if (status.includes('vollständig')) {
+    // Nur "vollständig" → Osama. "unvollständig" bleibt beim Bearbeiter (rot).
+    if (isVollstaendigStatus(status)) {
       map.Osama.push(akte);
       return;
     }
