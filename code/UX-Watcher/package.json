@@ -1,0 +1,26 @@
+{
+  "name": "husseinsouleiman",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "watcher": "node watcher.js",
+    "watcher:debug": "UX_DEBUG_SCREENSHOT_PATH=debug-table.png node watcher.js",
+    "assign": "node assign-sachbearbeiter.js",
+    "assign:headed": "UX_ASSIGN_HEADED=1 node assign-sachbearbeiter.js",
+    "assign:server": "node assign-server.js",
+    "check": "node --check watcher.js && node --check google.js && node --check assign-sachbearbeiter.js && node --check assign-server.js",
+    "test": "npm run check"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "googleapis": "^152.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "playwright": "^1.54.0"
+  }
+}
