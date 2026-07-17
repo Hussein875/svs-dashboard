@@ -501,10 +501,12 @@ html[data-theme="dark"] .logo {
 .card.extern.hj .extern-badge      { background: #7c3aed; }
 .card.extern.hussein .extern-badge { background: #2563eb; }
 .card.extern.hu .extern-badge      { background: #1e293b; }
+.card.extern.mohamad .extern-badge { background: #0d9488; }
 
 .card.extern.hj      { border-left: 3px solid #7c3aed; }
 .card.extern.hussein { border-left: 3px solid #2563eb; }
 .card.extern.hu      { border-left: 3px solid #94a3b8; }
+.card.extern.mohamad { border-left: 3px solid #0d9488; }
 
 /* ── Footer / Stats ─────────────────────────────────────── */
 .app-footer {

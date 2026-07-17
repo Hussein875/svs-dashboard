@@ -52,7 +52,17 @@ const externalWorkerAliases = new Map([
   ['b', { cls: 'hussein', label: 'B' }],
   ['hussein selman', { cls: 'hussein', label: 'B' }],
   ['hu', { cls: 'hu', label: 'HU' }],
-  ['hussein souleiman', { cls: 'hu', label: 'HU' }]
+  ['hussein souleiman', { cls: 'hu', label: 'HU' }],
+  ['m', { cls: 'mohamad', label: 'M' }],
+  ['mohamad', { cls: 'mohamad', label: 'M' }],
+  ['mohammed', { cls: 'mohamad', label: 'M' }],
+  ['muhammad', { cls: 'mohamad', label: 'M' }],
+  ['mohamad zahhredine', { cls: 'mohamad', label: 'M' }],
+  ['mohammed zahhredine', { cls: 'mohamad', label: 'M' }],
+  ['mohamad zahredine', { cls: 'mohamad', label: 'M' }],
+  ['mohammed zahredine', { cls: 'mohamad', label: 'M' }],
+  ['mohamad zahreddine', { cls: 'mohamad', label: 'M' }],
+  ['mohammed zahreddine', { cls: 'mohamad', label: 'M' }]
 ]);
 
 let lastFetchTime = null;
@@ -742,6 +752,13 @@ function resolveExternalBadge(rawWorker) {
     if (/\bselman\b/.test(normalized)) return externalWorkerAliases.get('b');
     if (/\b(souleiman|suleiman|sleiman)\b/.test(normalized)) return externalWorkerAliases.get('hu');
     if (/\bjaber\b/.test(normalized)) return externalWorkerAliases.get('h');
+  }
+
+  // Mohamad Zahhredine (+ common spelling variants)
+  if (/\b(zahhredine|zahredine|zahreddine|zaheredine)\b/.test(normalized)
+      || (/\b(mohamad|mohammed|muhammad)\b/.test(normalized)
+        && /\b(zahh|zahr)/.test(normalized))) {
+    return externalWorkerAliases.get('m');
   }
 
   const firstName = normalized.split(' ')[0];
