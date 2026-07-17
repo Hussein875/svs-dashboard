@@ -46,9 +46,9 @@ const workerColumnAliases = new Map([
   ['osama souleiman', 'Osama']
 ]);
 const externalWorkerAliases = new Map([
-  ['h', { cls: 'hj', label: 'H' }],
-  ['hj', { cls: 'hj', label: 'H' }],
-  ['hussein jaber', { cls: 'hj', label: 'H' }],
+  ['h', { cls: 'hj', label: 'HJ' }],
+  ['hj', { cls: 'hj', label: 'HJ' }],
+  ['hussein jaber', { cls: 'hj', label: 'HJ' }],
   ['b', { cls: 'hussein', label: 'B' }],
   ['hussein selman', { cls: 'hussein', label: 'B' }],
   ['hu', { cls: 'hu', label: 'HU' }],
