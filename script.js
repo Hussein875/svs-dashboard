@@ -52,7 +52,21 @@ const externalWorkerAliases = new Map([
   ['b', { cls: 'hussein', label: 'B' }],
   ['hussein selman', { cls: 'hussein', label: 'B' }],
   ['hu', { cls: 'hu', label: 'HU' }],
-  ['hussein souleiman', { cls: 'hu', label: 'HU' }]
+  ['hussein souleiman', { cls: 'hu', label: 'HU' }],
+  ['m', { cls: 'mohamad', label: 'M' }],
+  ['mohamad', { cls: 'mohamad', label: 'M' }],
+  ['mohamed', { cls: 'mohamad', label: 'M' }],
+  ['mohammed', { cls: 'mohamad', label: 'M' }],
+  ['muhammad', { cls: 'mohamad', label: 'M' }],
+  ['mohamed zahreddine', { cls: 'mohamad', label: 'M' }],
+  ['mohamad zahreddine', { cls: 'mohamad', label: 'M' }],
+  ['mohammed zahreddine', { cls: 'mohamad', label: 'M' }],
+  ['mohamed zahhredine', { cls: 'mohamad', label: 'M' }],
+  ['mohamad zahhredine', { cls: 'mohamad', label: 'M' }],
+  ['mohammed zahhredine', { cls: 'mohamad', label: 'M' }],
+  ['mohamed zahredine', { cls: 'mohamad', label: 'M' }],
+  ['mohamad zahredine', { cls: 'mohamad', label: 'M' }],
+  ['mohammed zahredine', { cls: 'mohamad', label: 'M' }]
 ]);
 
 let lastFetchTime = null;
@@ -341,7 +355,7 @@ async function assignAkteToColumn(akte, column, card) {
 
 function isManualAssignStatus(status) {
   const s = String(status || '').toLowerCase().trim();
-  return !isGeprueftStatus(s) && !s.includes('vollständig');
+  return !isGeprueftStatus(s) && !isVollstaendigStatus(s);
 }
 
 function bindCardDrag(card, akte, status) {
@@ -703,6 +717,15 @@ function isGeprueftStatus(status) {
   return /^geprüft\s*(o|1|2|hj|hk)$/i.test(status);
 }
 
+function isUnvollstaendigStatus(status) {
+  return String(status || '').toLowerCase().includes('unvollständig');
+}
+
+function isVollstaendigStatus(status) {
+  const s = String(status || '').toLowerCase();
+  return s.includes('vollständig') && !s.includes('unvollständig');
+}
+
 function normalizeWorkerName(rawValue) {
   return String(rawValue || '')
     .replace(/\s+/g, ' ')
@@ -733,6 +756,13 @@ function resolveExternalBadge(rawWorker) {
     if (/\bselman\b/.test(normalized)) return externalWorkerAliases.get('b');
     if (/\b(souleiman|suleiman|sleiman)\b/.test(normalized)) return externalWorkerAliases.get('hu');
     if (/\bjaber\b/.test(normalized)) return externalWorkerAliases.get('h');
+  }
+
+  // Mohamed Zahreddine (+ common spelling variants)
+  if (/\b(zahreddine|zahhredine|zahredine|zaheredine)\b/.test(normalized)
+      || (/\b(mohamed|mohamad|mohammed|muhammad)\b/.test(normalized)
+        && /\b(zahh|zahr)/.test(normalized))) {
+    return externalWorkerAliases.get('m');
   }
 
   const firstName = normalized.split(' ')[0];
@@ -861,8 +891,8 @@ const columnClassMap = {
 function applyCardStatus(card, status) {
   card.classList.remove('status-geprueft', 'status-unvollstaendig', 'status-vollstaendig');
   if (isGeprueftStatus(status)) card.classList.add('status-geprueft');
-  else if (status.includes('unvollständig')) card.classList.add('status-unvollstaendig');
-  else if (status.includes('vollständig')) card.classList.add('status-vollstaendig');
+  else if (isUnvollstaendigStatus(status)) card.classList.add('status-unvollstaendig');
+  else if (isVollstaendigStatus(status)) card.classList.add('status-vollstaendig');
 }
 
 function buildBoardMap(data) {
@@ -877,7 +907,8 @@ function buildBoardMap(data) {
       return;
     }
 
-    if (status.includes('vollständig')) {
+    // Nur "vollständig" → Osama. "unvollständig" bleibt beim Bearbeiter (rot).
+    if (isVollstaendigStatus(status)) {
       map.Osama.push(akte);
       return;
     }
