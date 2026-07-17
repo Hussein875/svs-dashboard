@@ -55,14 +55,18 @@ const externalWorkerAliases = new Map([
   ['hussein souleiman', { cls: 'hu', label: 'HU' }],
   ['m', { cls: 'mohamad', label: 'M' }],
   ['mohamad', { cls: 'mohamad', label: 'M' }],
+  ['mohamed', { cls: 'mohamad', label: 'M' }],
   ['mohammed', { cls: 'mohamad', label: 'M' }],
   ['muhammad', { cls: 'mohamad', label: 'M' }],
+  ['mohamed zahreddine', { cls: 'mohamad', label: 'M' }],
+  ['mohamad zahreddine', { cls: 'mohamad', label: 'M' }],
+  ['mohammed zahreddine', { cls: 'mohamad', label: 'M' }],
+  ['mohamed zahhredine', { cls: 'mohamad', label: 'M' }],
   ['mohamad zahhredine', { cls: 'mohamad', label: 'M' }],
   ['mohammed zahhredine', { cls: 'mohamad', label: 'M' }],
+  ['mohamed zahredine', { cls: 'mohamad', label: 'M' }],
   ['mohamad zahredine', { cls: 'mohamad', label: 'M' }],
-  ['mohammed zahredine', { cls: 'mohamad', label: 'M' }],
-  ['mohamad zahreddine', { cls: 'mohamad', label: 'M' }],
-  ['mohammed zahreddine', { cls: 'mohamad', label: 'M' }]
+  ['mohammed zahredine', { cls: 'mohamad', label: 'M' }]
 ]);
 
 let lastFetchTime = null;
@@ -754,9 +758,9 @@ function resolveExternalBadge(rawWorker) {
     if (/\bjaber\b/.test(normalized)) return externalWorkerAliases.get('h');
   }
 
-  // Mohamad Zahhredine (+ common spelling variants)
-  if (/\b(zahhredine|zahredine|zahreddine|zaheredine)\b/.test(normalized)
-      || (/\b(mohamad|mohammed|muhammad)\b/.test(normalized)
+  // Mohamed Zahreddine (+ common spelling variants)
+  if (/\b(zahreddine|zahhredine|zahredine|zaheredine)\b/.test(normalized)
+      || (/\b(mohamed|mohamad|mohammed|muhammad)\b/.test(normalized)
         && /\b(zahh|zahr)/.test(normalized))) {
     return externalWorkerAliases.get('m');
   }
