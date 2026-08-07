@@ -1,0 +1,22 @@
+services:
+  assign-service:
+    build:
+      context: ../..
+      dockerfile: deploy/assign-service/Dockerfile
+    container_name: assign-service
+    restart: unless-stopped
+    env_file:
+      - /opt/secrets/assign-service.env
+    environment:
+      TZ: Europe/Berlin
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/google-sa.json
+      ASSIGN_PORT: 3080
+    volumes:
+      - /opt/secrets/google-sa.json:/secrets/google-sa.json:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.assign-service.rule=Host(`assign.69-62-113-32.sslip.io`)
+      - traefik.http.routers.assign-service.entrypoints=websecure
+      - traefik.http.routers.assign-service.tls=true
+      - traefik.http.routers.assign-service.tls.certresolver=letsencrypt
+      - traefik.http.services.assign-service.loadbalancer.server.port=3080
