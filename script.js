@@ -1265,97 +1265,6 @@ function applyCardHighlight(card, { nummer, col }) {
   knownAkten.add(nummer);
 }
 
-function getMobileStatusMeta(status) {
-  if (isGeprueftStatus(status)) return { label: 'Geprüft', className: 'mobile-status-geprueft' };
-  if (isVollstaendigStatus(status)) return { label: 'Vollständig', className: 'mobile-status-vollstaendig' };
-  if (isUnvollstaendigStatus(status)) return { label: 'Unvollständig', className: 'mobile-status-unvollstaendig' };
-  if (isUnknownStatus(status)) return { label: 'Unbekannt', className: 'mobile-status-unknown' };
-  return { label: 'Unbekannt', className: 'mobile-status-unknown' };
-}
-
-function renderMobileBoard(map) {
-  const tbody = document.getElementById('mobileBoardBody');
-  if (!tbody) return;
-
-  tbody.textContent = '';
-  const fragment = document.createDocumentFragment();
-  let rowCount = 0;
-
-  columns.forEach((col) => {
-    map[col].forEach((item) => {
-      const { nummer, status, bearbeiter } = item;
-      if (nummer.toLowerCase() === col.toLowerCase()) return;
-
-      const tr = document.createElement('tr');
-      tr.className = `mobile-board-row ${columnClassMap[col] || ''}`;
-
-      const akteCell = document.createElement('td');
-      akteCell.className = 'mobile-board-akte';
-      const akteWrap = document.createElement('div');
-      akteWrap.className = 'mobile-board-akte-wrap';
-
-      const akteNum = document.createElement('span');
-      akteNum.className = 'mobile-board-akte-num';
-      akteNum.textContent = nummer;
-      akteWrap.appendChild(akteNum);
-
-      const externalBadge = resolveExternalBadge(bearbeiter);
-      if (externalBadge) {
-        const badge = document.createElement('span');
-        badge.className = `mobile-board-extern extern-${externalBadge.cls}`;
-        badge.textContent = externalBadge.label;
-        akteWrap.appendChild(badge);
-      }
-      akteCell.appendChild(akteWrap);
-
-      const aktenNummer = extractAktenNummer(nummer);
-      const importDate = aktenNummer ? importDateByAkte.get(aktenNummer) : null;
-      const ageDays = getAgeDays(importDate);
-      if (ageDays !== null && ageDays >= AGE_HINT_DAYS) {
-        tr.classList.add('mobile-row-aged');
-        tr.title = ageDays === 1 ? 'Seit 1 Tag im System' : `Seit ${ageDays} Tagen im System`;
-      }
-
-      const colCell = document.createElement('td');
-      colCell.className = 'mobile-board-col';
-      colCell.textContent = col;
-
-      const statusMeta = getMobileStatusMeta(status);
-      const statusCell = document.createElement('td');
-      statusCell.className = `mobile-board-status ${statusMeta.className}`;
-
-      const dot = document.createElement('span');
-      dot.className = 'mobile-board-status-dot';
-      dot.setAttribute('aria-hidden', 'true');
-
-      const label = document.createElement('span');
-      label.className = 'mobile-board-status-label';
-      label.textContent = statusMeta.label;
-
-      statusCell.appendChild(dot);
-      statusCell.appendChild(label);
-
-      tr.appendChild(akteCell);
-      tr.appendChild(colCell);
-      tr.appendChild(statusCell);
-      fragment.appendChild(tr);
-      rowCount += 1;
-    });
-  });
-
-  if (rowCount === 0) {
-    const tr = document.createElement('tr');
-    const td = document.createElement('td');
-    td.colSpan = 3;
-    td.className = 'mobile-board-empty';
-    td.textContent = 'Keine offenen Akten';
-    tr.appendChild(td);
-    fragment.appendChild(tr);
-  }
-
-  tbody.appendChild(fragment);
-}
-
 function renderBoard(data) {
   const board = document.getElementById('board');
   if (!board) return;
@@ -1445,7 +1354,6 @@ function renderBoard(data) {
   });
 
   board.appendChild(fragment);
-  renderMobileBoard(map);
 
   previousCardPositions = new Map();
   columns.forEach((col) => {
