@@ -31,7 +31,7 @@
       } catch (_) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=30">
+  <link rel="stylesheet" href="style.css?v=33">
 </head>
 <body class="dashboard">
 
@@ -50,6 +50,10 @@
 
     <button type="button" id="adminToggle" class="admin-toggle" hidden aria-label="Admin entsperren" title="Admin entsperren">
       <span class="admin-toggle-icon" aria-hidden="true">🔒</span>
+    </button>
+
+    <button type="button" id="badgeAdminToggle" class="badge-admin-toggle" hidden aria-label="Spalten-Status bearbeiten" title="Spalten-Status (Urlaub/Krank)">
+      <span class="badge-admin-toggle-icon" aria-hidden="true">🏷️</span>
     </button>
 
     <button type="button" id="themeToggle" class="theme-toggle" aria-label="Design umschalten" title="Dunkles Design">
@@ -111,6 +115,63 @@
     </div>
   </div>
 
-<script src="script.js?v=61"></script>
+  <div id="badgeAdminModal" class="pin-modal badge-admin-modal" hidden>
+    <div class="pin-modal-dialog badge-admin-dialog" role="dialog" aria-labelledby="badgeAdminModalTitle" aria-modal="true">
+      <h2 id="badgeAdminModalTitle" class="pin-modal-title">Spalten-Status</h2>
+      <p class="badge-admin-hint">Urlaub oder Krank für Sachbearbeiter-Spalten setzen.</p>
+      <form id="badgeAdminForm" class="badge-admin-form">
+        <div class="badge-admin-table" role="group" aria-label="Spalten-Status">
+          <div class="badge-admin-row badge-admin-head">
+            <span>Spalte</span>
+            <span>Status</span>
+            <span>Bis</span>
+          </div>
+          <div class="badge-admin-row">
+            <span class="badge-admin-col">Hadi</span>
+            <select class="badge-admin-select" data-badge-type="Hadi" aria-label="Status Hadi">
+              <option value="">Keiner</option>
+              <option value="urlaub">Urlaub 🌴</option>
+              <option value="krank">Krank ✚</option>
+            </select>
+            <input class="badge-admin-date" type="date" data-badge-until="Hadi" aria-label="Bis Hadi" disabled>
+          </div>
+          <div class="badge-admin-row">
+            <span class="badge-admin-col">Ramazan</span>
+            <select class="badge-admin-select" data-badge-type="Ramazan" aria-label="Status Ramazan">
+              <option value="">Keiner</option>
+              <option value="urlaub">Urlaub 🌴</option>
+              <option value="krank">Krank ✚</option>
+            </select>
+            <input class="badge-admin-date" type="date" data-badge-until="Ramazan" aria-label="Bis Ramazan" disabled>
+          </div>
+          <div class="badge-admin-row">
+            <span class="badge-admin-col">Robar</span>
+            <select class="badge-admin-select" data-badge-type="Robar" aria-label="Status Robar">
+              <option value="">Keiner</option>
+              <option value="urlaub">Urlaub 🌴</option>
+              <option value="krank">Krank ✚</option>
+            </select>
+            <input class="badge-admin-date" type="date" data-badge-until="Robar" aria-label="Bis Robar" disabled>
+          </div>
+          <div class="badge-admin-row">
+            <span class="badge-admin-col">Osama</span>
+            <select class="badge-admin-select" data-badge-type="Osama" aria-label="Status Osama">
+              <option value="">Keiner</option>
+              <option value="urlaub">Urlaub 🌴</option>
+              <option value="krank">Krank ✚</option>
+            </select>
+            <input class="badge-admin-date" type="date" data-badge-until="Osama" aria-label="Bis Osama" disabled>
+          </div>
+        </div>
+        <p id="badgeAdminError" class="pin-error" aria-live="polite"></p>
+        <div class="pin-actions">
+          <button type="button" id="badgeAdminCancel" class="pin-btn pin-btn-secondary">Abbrechen</button>
+          <button type="submit" class="pin-btn pin-btn-primary">Speichern</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script src="script.js?v=64"></script>
 </body>
 </html>

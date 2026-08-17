@@ -8,6 +8,7 @@ const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tq
 const IMPORT_LOG_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=A2:C`;
 const IMPORT_RUN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=F1`;
 const TAGES_STAT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=H2:J`;
+const ABSENCE_BADGES_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=L2:N5`;
 
 const ADMIN_TOKEN_KEY = 'svs-assign-token';
 const ASSIGN_COLUMNS = ['Hadi', 'Ramazan', 'Robar'];
@@ -23,7 +24,7 @@ function resolveAssignApiUrl() {
     /* URLSearchParams nicht verfügbar */
   }
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return DEFAULT_ASSIGN_API_URL;
+    return 'http://localhost:3080';
   }
   return DEFAULT_ASSIGN_API_URL;
 }
@@ -68,7 +69,145 @@ const externalWorkerAliases = new Map([
   ['mohammed zahredine', { cls: 'mohamad', label: 'M' }]
 ]);
 
-let lastFetchTime = null;
+const BADGE_CONFIG_COLUMNS = ['Hadi', 'Ramazan', 'Robar', 'Osama'];
+const ABSENCE_BADGE_TYPES = {
+  urlaub: { emoji: '🌴', className: 'column-status-vacation', labelPrefix: 'Im Urlaub bis' },
+  krank: { emoji: '✚', className: 'column-status-sick', labelPrefix: 'Krank bis' },
+};
+
+let columnAbsenceBadges = Object.fromEntries(
+  BADGE_CONFIG_COLUMNS.map((col) => [col, { type: '', until: '' }])
+);
+
+function isColumnAbsenceActive(untilDateKey) {
+  return Boolean(untilDateKey) && todayDateKey() <= untilDateKey;
+}
+
+function formatBadgeDateDE(dateKey) {
+  const match = String(dateKey || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return '';
+  return `${match[3]}.${match[2]}.`;
+}
+
+function parseGvizCellValue(cell) {
+  if (!cell) return '';
+  if (cell.f) {
+    const formatted = String(cell.f).trim();
+    const deMatch = formatted.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    if (deMatch) {
+      const day = deMatch[1].padStart(2, '0');
+      const month = deMatch[2].padStart(2, '0');
+      return `${deMatch[3]}-${month}-${day}`;
+    }
+    return formatted;
+  }
+
+  const value = cell.v;
+  if (value == null) return '';
+  if (typeof value === 'string' && value.startsWith('Date(')) {
+    const match = value.match(/Date\((\d+),(\d+),(\d+)\)/);
+    if (match) {
+      const year = match[1];
+      const month = String(Number(match[2]) + 1).padStart(2, '0');
+      const day = String(match[3]).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  return String(value).trim();
+}
+
+function normalizeAbsenceBadgeType(rawType) {
+  const type = String(rawType ?? '').trim().toLowerCase();
+  return type === 'urlaub' || type === 'krank' ? type : '';
+}
+
+function normalizeAbsenceBadgeUntil(rawUntil) {
+  const value = String(rawUntil ?? '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const deMatch = value.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (deMatch) {
+    const day = deMatch[1].padStart(2, '0');
+    const month = deMatch[2].padStart(2, '0');
+    return `${deMatch[3]}-${month}-${day}`;
+  }
+  return '';
+}
+
+function parseAbsenceBadgesFromGvizRows(rows) {
+  const badges = Object.fromEntries(
+    BADGE_CONFIG_COLUMNS.map((col) => [col, { type: '', until: '' }])
+  );
+
+  for (const row of rows) {
+    const column = parseGvizCellValue(row.c?.[0]).trim();
+    if (!BADGE_CONFIG_COLUMNS.includes(column)) continue;
+    const type = normalizeAbsenceBadgeType(parseGvizCellValue(row.c?.[1]));
+    const until = type ? normalizeAbsenceBadgeUntil(parseGvizCellValue(row.c?.[2])) : '';
+    badges[column] = { type, until };
+  }
+
+  return badges;
+}
+
+function badgesChanged(nextBadges) {
+  return BADGE_CONFIG_COLUMNS.some((col) => {
+    const prev = columnAbsenceBadges[col] || { type: '', until: '' };
+    const next = nextBadges[col] || { type: '', until: '' };
+    return prev.type !== next.type || prev.until !== next.until;
+  });
+}
+
+function getColumnBadgeConfig(col) {
+  const entry = columnAbsenceBadges[col];
+  if (!entry) return null;
+
+  const type = normalizeAbsenceBadgeType(entry.type);
+  if (!type || !isColumnAbsenceActive(entry.until)) return null;
+
+  const typeConfig = ABSENCE_BADGE_TYPES[type];
+  const untilLabel = formatBadgeDateDE(entry.until);
+  return {
+    emoji: typeConfig.emoji,
+    className: typeConfig.className,
+    label: `${typeConfig.labelPrefix} ${untilLabel}`,
+  };
+}
+
+async function fetchAbsenceBadges({ force = false } = {}) {
+  try {
+    const url = force ? `${ABSENCE_BADGES_URL}&_=${Date.now()}` : ABSENCE_BADGES_URL;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return false;
+
+    const rows = parseGvizRows(await res.text());
+    const nextBadges = parseAbsenceBadgesFromGvizRows(rows);
+    const changed = badgesChanged(nextBadges);
+    columnAbsenceBadges = nextBadges;
+    return changed;
+  } catch (err) {
+    console.warn('fetchAbsenceBadges() Fehler:', err);
+    return false;
+  }
+}
+
+function createColumnTitle(col) {
+  const title = document.createElement('h2');
+  title.textContent = col;
+  return title;
+}
+
+function appendColumnAbsenceBadge(header, col) {
+  const badgeConfig = getColumnBadgeConfig(col);
+  if (!badgeConfig) return;
+
+  const badge = document.createElement('span');
+  badge.className = `column-status-badge ${badgeConfig.className}`;
+  badge.textContent = badgeConfig.emoji;
+  badge.title = badgeConfig.label;
+  badge.setAttribute('aria-label', badgeConfig.label);
+  header.appendChild(badge);
+}
 let nextFetchTime = null;
 let inFlightController = null;
 let lastFetchError = '';
@@ -82,6 +221,7 @@ let knownAkten = new Set();
 let isFirstBoardRender = true;
 let adminUnlocked = false;
 let pinSubmitInFlight = false;
+let badgeSaveInFlight = false;
 let assignInFlight = false;
 
 function getAdminToken() {
@@ -107,10 +247,12 @@ function isAdminModeAvailable() {
 
 function updateAdminUi() {
   const btn = document.getElementById('adminToggle');
+  const badgeBtn = document.getElementById('badgeAdminToggle');
   if (!btn) return;
 
   if (!isAdminModeAvailable()) {
     btn.hidden = true;
+    if (badgeBtn) badgeBtn.hidden = true;
     adminUnlocked = false;
     return;
   }
@@ -121,6 +263,8 @@ function updateAdminUi() {
   btn.setAttribute('aria-label', adminUnlocked ? 'Admin sperren' : 'Admin entsperren');
   const icon = btn.querySelector('.admin-toggle-icon');
   if (icon) icon.textContent = adminUnlocked ? '🔓' : '🔒';
+
+  if (badgeBtn) badgeBtn.hidden = !adminUnlocked;
 }
 
 function showPinModal() {
@@ -207,6 +351,7 @@ function onPinInput(event) {
 function lockAdmin() {
   setAdminToken('');
   adminUnlocked = false;
+  hideBadgeAdminModal();
   updateAdminUi();
   if (lastBoardData.length) renderBoard(lastBoardData);
 }
@@ -252,6 +397,142 @@ function bindAdminControls() {
     adminUnlocked = true;
   }
   updateAdminUi();
+}
+
+function showBadgeAdminModal() {
+  if (!adminUnlocked) return;
+
+  const modal = document.getElementById('badgeAdminModal');
+  const form = document.getElementById('badgeAdminForm');
+  const errorEl = document.getElementById('badgeAdminError');
+  if (!modal || !form) return;
+
+  BADGE_CONFIG_COLUMNS.forEach((col) => {
+    const typeSelect = form.querySelector(`[data-badge-type="${col}"]`);
+    const untilInput = form.querySelector(`[data-badge-until="${col}"]`);
+    const entry = columnAbsenceBadges[col] || { type: '', until: '' };
+    if (typeSelect) typeSelect.value = entry.type || '';
+    if (untilInput) {
+      untilInput.value = entry.until || '';
+      untilInput.disabled = !entry.type;
+    }
+  });
+
+  if (errorEl) errorEl.textContent = '';
+  modal.hidden = false;
+}
+
+function hideBadgeAdminModal() {
+  const modal = document.getElementById('badgeAdminModal');
+  if (modal) modal.hidden = true;
+}
+
+function onBadgeTypeChange(event) {
+  const select = event.target;
+  const col = select.dataset.badgeType;
+  const form = document.getElementById('badgeAdminForm');
+  const untilInput = form?.querySelector(`[data-badge-until="${col}"]`);
+  if (!untilInput) return;
+
+  const hasType = Boolean(select.value);
+  untilInput.disabled = !hasType;
+  if (!hasType) untilInput.value = '';
+  else if (!untilInput.value) untilInput.value = todayDateKey();
+}
+
+async function submitBadgeAdmin(event) {
+  event.preventDefault();
+  if (!adminUnlocked || badgeSaveInFlight) return;
+
+  const form = document.getElementById('badgeAdminForm');
+  const errorEl = document.getElementById('badgeAdminError');
+  const token = getAdminToken();
+  if (!token) {
+    lockAdmin();
+    showPinModal();
+    return;
+  }
+
+  const badges = BADGE_CONFIG_COLUMNS.map((col) => {
+    const type = normalizeAbsenceBadgeType(form.querySelector(`[data-badge-type="${col}"]`)?.value);
+    const until = type
+      ? normalizeAbsenceBadgeUntil(form.querySelector(`[data-badge-until="${col}"]`)?.value)
+      : '';
+    return { column: col, type, until };
+  });
+
+  for (const entry of badges) {
+    if (entry.type && !entry.until) {
+      if (errorEl) errorEl.textContent = `Bitte Enddatum für ${entry.column} wählen.`;
+      return;
+    }
+  }
+
+  badgeSaveInFlight = true;
+  if (errorEl) errorEl.textContent = '';
+
+  try {
+    const res = await fetch(`${ASSIGN_API_URL}/api/badges`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ badges }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      lockAdmin();
+      showPinModal();
+      throw new Error('Session abgelaufen – bitte erneut anmelden.');
+    }
+    if (!res.ok || !data.ok) {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+
+    columnAbsenceBadges = data.badges || Object.fromEntries(
+      badges.map((entry) => [entry.column, { type: entry.type, until: entry.until }])
+    );
+    hideBadgeAdminModal();
+    if (lastBoardData.length) renderBoard(lastBoardData);
+    await fetchAbsenceBadges({ force: true });
+  } catch (err) {
+    if (errorEl) errorEl.textContent = err.message || 'Speichern fehlgeschlagen';
+  } finally {
+    badgeSaveInFlight = false;
+  }
+}
+
+function bindBadgeAdminControls() {
+  const btn = document.getElementById('badgeAdminToggle');
+  const modal = document.getElementById('badgeAdminModal');
+  const form = document.getElementById('badgeAdminForm');
+  const cancelBtn = document.getElementById('badgeAdminCancel');
+
+  if (btn && btn.dataset.bound !== '1') {
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', showBadgeAdminModal);
+  }
+
+  if (form && form.dataset.bound !== '1') {
+    form.dataset.bound = '1';
+    form.addEventListener('submit', submitBadgeAdmin);
+    form.querySelectorAll('[data-badge-type]').forEach((select) => {
+      select.addEventListener('change', onBadgeTypeChange);
+    });
+  }
+
+  if (cancelBtn && cancelBtn.dataset.bound !== '1') {
+    cancelBtn.dataset.bound = '1';
+    cancelBtn.addEventListener('click', hideBadgeAdminModal);
+  }
+
+  if (modal && modal.dataset.bound !== '1') {
+    modal.dataset.bound = '1';
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) hideBadgeAdminModal();
+    });
+  }
 }
 
 function showAssignFeedback(card, state, message) {
@@ -819,6 +1100,8 @@ async function fetchData({ force = false } = {}) {
     const nextNumber = numbers.length ? Math.max(...numbers) + 1 : '–';
     setTickerText(`💥 Aktuelle Nummer: ${nextNumber} 🚗`);
 
+    await fetchAbsenceBadges({ force });
+
     renderBoard(cleanedRows);
     lastBoardData = cleanedRows;
     lastFetchTime = new Date();
@@ -963,8 +1246,7 @@ function renderBoard(data) {
     const header = document.createElement('div');
     header.className = 'column-header';
 
-    const title = document.createElement('h2');
-    title.textContent = col;
+    const title = createColumnTitle(col);
 
     const countBadge = document.createElement('span');
     countBadge.className = 'column-count';
@@ -972,6 +1254,7 @@ function renderBoard(data) {
 
     header.appendChild(title);
     header.appendChild(countBadge);
+    appendColumnAbsenceBadge(header, col);
     colDiv.appendChild(header);
 
     const cardsWrap = document.createElement('div');
@@ -1171,8 +1454,12 @@ window.addEventListener('DOMContentLoaded', () => {
   initTheme();
   bindThemeToggle();
   bindAdminControls();
+  bindBadgeAdminControls();
 
   ensureOpenCountWidget();
+  fetchAbsenceBadges({ force: true }).then((changed) => {
+    if (changed && lastBoardData.length) renderBoard(lastBoardData);
+  });
   startTickerAnimation();
   scheduleNextFetch();
   fetchData();
