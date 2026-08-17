@@ -1123,7 +1123,8 @@ async function fetchData({ force = false } = {}) {
       const eingang = extractAktenzeichen(eingangRaw);
       const bearbeiter = String(row.c?.[1]?.v ?? '').trim();
       const status = String(row.c?.[2]?.v ?? '').trim().toLowerCase();
-      return { Eingang: eingang, Bearbeiter: bearbeiter, Status: status };
+      const uploader = String(row.c?.[3]?.v ?? '').trim();
+      return { Eingang: eingang, Bearbeiter: bearbeiter, Status: status, Uploader: uploader };
     }).filter((row) => row.Eingang && row.Eingang.toLowerCase() !== 'eingang');
 
     const cleanedRows = rows.filter((row) => !/^versendet\b/i.test(row.Status));
@@ -1218,7 +1219,12 @@ function buildBoardMap(data) {
 
   data.forEach((row) => {
     const status = row.Status.toLowerCase().trim();
-    const akte = { nummer: row.Eingang, status, bearbeiter: row.Bearbeiter };
+    const akte = {
+      nummer: row.Eingang,
+      status,
+      bearbeiter: row.Bearbeiter,
+      uploader: row.Uploader || '',
+    };
 
     if (isGeprueftStatus(status)) {
       map.Geprüft.push(akte);
@@ -1303,7 +1309,7 @@ function renderBoard(data) {
     bindColumnDrop(cardsWrap, col);
 
     map[col].forEach((item) => {
-      const { nummer, status, bearbeiter } = item;
+      const { nummer, status, bearbeiter, uploader } = item;
       if (nummer.toLowerCase() === col.toLowerCase()) return;
 
       const card = document.createElement('div');
@@ -1324,6 +1330,11 @@ function renderBoard(data) {
       if (ageDays !== null && ageDays >= AGE_HINT_DAYS) {
         card.classList.add('card-aged');
         card.title = ageDays === 1 ? 'Seit 1 Tag im System' : `Seit ${ageDays} Tagen im System`;
+      }
+
+      if (uploader) {
+        const uploadHint = `Hochgeladen von ${uploader}`;
+        card.title = card.title ? `${card.title} · ${uploadHint}` : uploadHint;
       }
 
       if (isUnknownStatus(status)) {
