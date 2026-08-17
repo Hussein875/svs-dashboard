@@ -264,7 +264,15 @@ function updateAdminUi() {
   const icon = btn.querySelector('.admin-toggle-icon');
   if (icon) icon.textContent = adminUnlocked ? '🔓' : '🔒';
 
-  if (badgeBtn) badgeBtn.hidden = !adminUnlocked;
+  if (badgeBtn) {
+    if (adminUnlocked) {
+      badgeBtn.hidden = false;
+      badgeBtn.removeAttribute('hidden');
+    } else {
+      badgeBtn.hidden = true;
+      badgeBtn.setAttribute('hidden', '');
+    }
+  }
 }
 
 function showPinModal() {

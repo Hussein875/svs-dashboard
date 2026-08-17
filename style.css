@@ -211,7 +211,7 @@ html[data-theme="dark"] .logo {
 }
 
 .badge-admin-toggle {
-  display: inline-flex;
+  display: none;
   align-items: center;
   justify-content: center;
   width: 38px;
@@ -223,6 +223,14 @@ html[data-theme="dark"] .logo {
   color: var(--text);
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.badge-admin-toggle:not([hidden]) {
+  display: inline-flex;
+}
+
+.badge-admin-toggle[hidden] {
+  display: none !important;
 }
 
 .badge-admin-toggle:hover {
