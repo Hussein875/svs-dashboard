@@ -455,7 +455,8 @@ html[data-kiosk="1"] .badge-admin-toggle {
   text-shadow: 0 0 3px #fff, 0 0 6px #fff, 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
-.column-ramazan .column-header .column-status-badge.column-status-vacation {
+.column-ramazan .column-header .column-status-badge.column-status-vacation,
+.column-ramazan .column-header .column-status-badge.column-status-sick {
   transform: translateX(18px);
 }
 
