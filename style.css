@@ -702,6 +702,18 @@ html[data-kiosk="1"] .badge-admin-toggle {
   min-width: 82px;
 }
 
+.stat-cell-starg {
+  min-width: 108px;
+}
+
+#stargCountWidget.state-yellow .stat-value { color: #fbbf24; }
+#stargCountWidget.state-orange .stat-value { color: #fb923c; }
+#stargCountWidget.state-burn {
+  background: rgba(239, 68, 68, 0.1);
+  animation: statPulse 0.9s ease-in-out infinite;
+}
+#stargCountWidget.state-burn .stat-value { color: var(--burn-text); }
+
 .stat-cell-open.state-yellow { background: rgba(245, 158, 11, 0.1); }
 .stat-cell-open.state-orange { background: rgba(249, 115, 22, 0.12); }
 .stat-cell-open.state-burn {

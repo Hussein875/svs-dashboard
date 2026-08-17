@@ -7,7 +7,7 @@ const SHEET_ID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 const IMPORT_LOG_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=A2:C`;
 const IMPORT_RUN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=F1`;
-const TAGES_STAT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=H2:J`;
+const TAGES_STAT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=H2:K`;
 const ABSENCE_BADGES_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=L2:N5`;
 
 const ADMIN_TOKEN_KEY = 'svs-assign-token';
@@ -753,7 +753,7 @@ function isSyncOkLabel(label) {
   return label === 'OK';
 }
 
-function setUploadStats({ syncLabel, rbCount }) {
+function setUploadStats({ syncLabel, rbCount, stargutachterCount }) {
   const syncEl = document.getElementById('uploadSyncValue');
   const syncCell = document.getElementById('syncStatCell');
   const displayLabel = normalizeSyncLabel(syncLabel);
@@ -767,6 +767,7 @@ function setUploadStats({ syncLabel, rbCount }) {
   }
 
   setRbCount(rbCount);
+  setStargutachterCount(stargutachterCount);
 }
 
 function setRbCount(count) {
@@ -789,28 +790,55 @@ function setRbCount(count) {
     : `Offene Reparaturbestätigungen: ${n}`;
 }
 
+function setStargutachterCount(count) {
+  const widget = document.getElementById('stargCountWidget');
+  const valueEl = document.getElementById('stargCountValue');
+  if (!widget || !valueEl) return;
+
+  const n = Number.isFinite(Number(count)) ? Number(count) : null;
+  valueEl.textContent = n === null ? '–' : String(n);
+
+  widget.classList.remove('state-green', 'state-yellow', 'state-orange', 'state-burn');
+  if (n === null) widget.classList.add('state-green');
+  else if (n === 0) widget.classList.add('state-green');
+  else if (n === 1) widget.classList.add('state-yellow');
+  else if (n >= 2) widget.classList.add('state-orange');
+  else widget.classList.add('state-green');
+
+  widget.title = n === null
+    ? 'Stargutachter-Fälle für Hadi im Drive-Ordner'
+    : n === 0
+      ? 'Keine offenen Stargutachter-Fälle für Hadi'
+      : `${n} Stargutachter-Fall${n === 1 ? '' : 'e'} für Hadi offen`;
+}
+
 function parseTagesStatRow(row) {
   const cell = (idx) => String(row.c?.[idx]?.v ?? '').trim();
 
-  // Neues Format: Datum | Drive-Abgleich | RB_Offene
+  // Neues Format: Datum | Drive-Abgleich | RB_Offene | Stargutachter
   if (['OK', 'Offen', 'Vollständig', 'Fehlt im Sheet', 'Komplett', 'Fehlt', 'Missing', 'Gap', 'NO'].includes(cell(1))) {
     const rb = Number.parseInt(cell(2), 10);
-    return { syncLabel: cell(1), rbCount: Number.isFinite(rb) ? rb : null };
+    const starg = Number.parseInt(cell(3), 10);
+    return {
+      syncLabel: cell(1),
+      rbCount: Number.isFinite(rb) ? rb : null,
+      stargutachterCount: Number.isFinite(starg) ? starg : 0,
+    };
   }
 
   // Altes 6-Spalten-Format: Datum | Neu | Offen | Drive | Sync | RB
   if (['OK', 'Offen', 'Vollständig', 'Fehlt im Sheet', 'Komplett', 'Fehlt', 'Missing', 'Gap', 'NO'].includes(cell(4))) {
     const rb = Number.parseInt(cell(5), 10);
-    return { syncLabel: cell(4), rbCount: Number.isFinite(rb) ? rb : null };
+    return { syncLabel: cell(4), rbCount: Number.isFinite(rb) ? rb : null, stargutachterCount: 0 };
   }
 
   // Altes 5-Spalten-Format: Datum | Neu | Offen | Sync | RB
   if (['OK', 'Offen', 'Vollständig', 'Fehlt im Sheet', 'Komplett', 'Fehlt', 'Missing', 'Gap', 'NO'].includes(cell(3))) {
     const rb = Number.parseInt(cell(4), 10);
-    return { syncLabel: cell(3), rbCount: Number.isFinite(rb) ? rb : null };
+    return { syncLabel: cell(3), rbCount: Number.isFinite(rb) ? rb : null, stargutachterCount: 0 };
   }
 
-  return { syncLabel: '–', rbCount: null };
+  return { syncLabel: '–', rbCount: null, stargutachterCount: 0 };
 }
 
 function computeImportStats(tagesStatRows) {
@@ -818,16 +846,18 @@ function computeImportStats(tagesStatRows) {
 
   let syncLabel = '–';
   let rbCount = null;
+  let stargutachterCount = 0;
   for (let i = tagesStatRows.length - 1; i >= 0; i -= 1) {
     const date = String(tagesStatRows[i].c?.[0]?.v ?? '').trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date !== today) continue;
     const parsed = parseTagesStatRow(tagesStatRows[i]);
     syncLabel = parsed.syncLabel;
     rbCount = parsed.rbCount;
+    stargutachterCount = parsed.stargutachterCount;
     break;
   }
 
-  return { syncLabel, rbCount };
+  return { syncLabel, rbCount, stargutachterCount };
 }
 
 async function fetchImportStats() {
