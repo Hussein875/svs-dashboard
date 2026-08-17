@@ -406,6 +406,123 @@ html[data-kiosk="1"] .badge-admin-toggle {
   scrollbar-color: var(--scrollbar) transparent;
 }
 
+.mobile-board {
+  display: none;
+}
+
+.mobile-board-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.mobile-board-table thead th {
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  text-align: left;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+}
+
+.mobile-board-table tbody td {
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.mobile-board-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.mobile-board-akte-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mobile-board-akte-num {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.mobile-board-extern {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.mobile-board-extern.extern-hj { background: #7c3aed; }
+.mobile-board-extern.extern-hussein { background: #2563eb; }
+.mobile-board-extern.extern-hu { background: #1e293b; }
+.mobile-board-extern.extern-mohamad { background: #0d9488; }
+
+.mobile-board-col {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.mobile-board-row.column-eingang .mobile-board-col { color: #64748b; }
+.mobile-board-row.column-hadi .mobile-board-col { color: #6366f1; }
+.mobile-board-row.column-ramazan .mobile-board-col { color: #8b5cf6; }
+.mobile-board-row.column-robar .mobile-board-col { color: #06b6d4; }
+.mobile-board-row.column-osama .mobile-board-col { color: #f59e0b; }
+.mobile-board-row.column-gepruft .mobile-board-col { color: #22c55e; }
+
+.mobile-board-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.mobile-board-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.mobile-board-status-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mobile-status-unvollstaendig .mobile-board-status-dot { background: #ef4444; }
+.mobile-status-vollstaendig .mobile-board-status-dot { background: #f59e0b; }
+.mobile-status-geprueft .mobile-board-status-dot { background: #22c55e; }
+.mobile-status-unknown .mobile-board-status-dot {
+  background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+}
+
+.mobile-row-aged {
+  background: rgba(180, 83, 9, 0.08);
+}
+
+.mobile-board-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 18px 12px !important;
+}
+
 /* ── Spalten ────────────────────────────────────────────── */
 .column {
   flex: 0 0 188px;
@@ -823,12 +940,19 @@ html[data-kiosk="1"] .badge-admin-toggle {
   }
 
   .board {
-    flex-direction: column;
-    align-items: stretch;
-    overflow-x: visible;
-    overflow-y: visible;
-    gap: 14px;
-    padding: 0;
+    display: none;
+  }
+
+  .mobile-board {
+    display: block;
+  }
+
+  html[data-kiosk="1"] .board {
+    display: flex;
+  }
+
+  html[data-kiosk="1"] .mobile-board {
+    display: none;
   }
 
   .column {

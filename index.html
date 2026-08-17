@@ -31,7 +31,7 @@
       } catch (_) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=39">
+  <link rel="stylesheet" href="style.css?v=40">
 </head>
 <body class="dashboard">
 
@@ -63,6 +63,19 @@
 
   <main class="app-main">
     <div class="board" id="board"></div>
+
+    <div class="mobile-board" id="mobileBoard" aria-label="Aktenübersicht">
+      <table class="mobile-board-table">
+        <thead>
+          <tr>
+            <th scope="col">Akte</th>
+            <th scope="col">Spalte</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody id="mobileBoardBody"></tbody>
+      </table>
+    </div>
 
     <div class="legend" aria-label="Legende">
       <span class="legend-item"><span class="dot red"></span> Unvollständig</span>
@@ -176,6 +189,6 @@
     </div>
   </div>
 
-<script src="script.js?v=69"></script>
+<script src="script.js?v=70"></script>
 </body>
 </html>
