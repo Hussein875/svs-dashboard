@@ -951,6 +951,16 @@ function isScriptStale(date) {
   return Date.now() - date.getTime() > SCRIPT_STALE_MS;
 }
 
+function isPendingUxSync(status) {
+  return !String(status || '').trim();
+}
+
+function isVisibleDashboardRow(row) {
+  if (isPendingUxSync(row.Status)) return false;
+  if (/^versendet\b/i.test(row.Status)) return false;
+  return true;
+}
+
 function isUnknownStatus(status) {
   const normalized = String(status || '').trim().toLowerCase();
   return normalized === 'unbekannt' || normalized === 'fehler beim auslesen';
@@ -1127,7 +1137,7 @@ async function fetchData({ force = false } = {}) {
       return { Eingang: eingang, Bearbeiter: bearbeiter, Status: status, Uploader: uploader };
     }).filter((row) => row.Eingang && row.Eingang.toLowerCase() !== 'eingang');
 
-    const cleanedRows = rows.filter((row) => !/^versendet\b/i.test(row.Status));
+    const cleanedRows = rows.filter((row) => isVisibleDashboardRow(row));
     setOpenCount(cleanedRows.length);
 
     const numbers = cleanedRows
