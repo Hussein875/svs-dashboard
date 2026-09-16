@@ -1335,7 +1335,7 @@ function renderBoard(data) {
     bindColumnDrop(cardsWrap, col);
 
     map[col].forEach((item) => {
-      const { nummer, status, bearbeiter, uploadShortcode, gutachtenType } = item;
+      const { nummer, status, bearbeiter, gutachtenType } = item;
       if (nummer.toLowerCase() === col.toLowerCase()) return;
 
       const card = document.createElement('div');
@@ -1355,22 +1355,13 @@ function renderBoard(data) {
 
       if (ageDays !== null && ageDays >= AGE_HINT_DAYS) {
         card.classList.add('card-aged');
-        card.title = ageDays === 1 ? 'Seit 1 Tag im System' : `Seit ${ageDays} Tagen im System`;
-      }
-
-      if (uploadShortcode) {
-        const shortcodeHint = `Kürzel ${uploadShortcode}`;
-        card.title = card.title ? `${card.title} · ${shortcodeHint}` : shortcodeHint;
       }
 
       if (isWertgutachtenType(gutachtenType)) {
         card.classList.add('card-wert');
-        const wertHint = 'Wertgutachten';
-        card.title = card.title ? `${card.title} · ${wertHint}` : wertHint;
         const wertBadge = document.createElement('div');
         wertBadge.className = 'wert-badge';
         wertBadge.textContent = '€';
-        wertBadge.title = 'Wertgutachten';
         wertBadge.setAttribute('aria-label', 'Wertgutachten');
         card.appendChild(wertBadge);
       }
@@ -1380,7 +1371,6 @@ function renderBoard(data) {
         const unknownBadge = document.createElement('div');
         unknownBadge.className = 'unknown-badge';
         unknownBadge.textContent = '?';
-        unknownBadge.title = 'Status unbekannt – UX-Sync prüfen';
         card.appendChild(unknownBadge);
       }
 
