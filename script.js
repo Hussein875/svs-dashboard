@@ -222,7 +222,7 @@ let isFirstBoardRender = true;
 let adminUnlocked = false;
 let pinSubmitInFlight = false;
 let badgeSaveInFlight = false;
-let assignInFlight = false;
+const assignInFlightKeys = new Set();
 
 function getAdminToken() {
   try {
@@ -592,7 +592,8 @@ function revertOptimisticAssign(snapshot) {
 }
 
 async function assignAkteToColumn(akte, column, card) {
-  if (!adminUnlocked || assignInFlight) return;
+  const akteKey = normalizeAkteKey(akte);
+  if (!adminUnlocked || !akteKey || assignInFlightKeys.has(akteKey)) return;
   const token = getAdminToken();
   if (!token) {
     lockAdmin();
@@ -600,7 +601,7 @@ async function assignAkteToColumn(akte, column, card) {
     return;
   }
 
-  assignInFlight = true;
+  assignInFlightKeys.add(akteKey);
   const snapshot = applyOptimisticAssign(akte, column);
   showAssignFeedback(card, 'pending', 'Zuweisung läuft…');
 
@@ -636,7 +637,7 @@ async function assignAkteToColumn(akte, column, card) {
     revertOptimisticAssign(snapshot);
     showAssignFeedback(card, 'error', err.message || 'Netzwerkfehler');
   } finally {
-    assignInFlight = false;
+    assignInFlightKeys.delete(akteKey);
   }
 }
 
@@ -966,6 +967,10 @@ function isUnknownStatus(status) {
   return normalized === 'unbekannt' || normalized === 'fehler beim auslesen';
 }
 
+function isWertgutachtenType(type) {
+  return String(type || '').trim().toLowerCase() === 'wert';
+}
+
 function makeEmptyMap() {
   return columns.reduce((map, col) => {
     map[col] = [];
@@ -1134,7 +1139,8 @@ async function fetchData({ force = false } = {}) {
       const bearbeiter = String(row.c?.[1]?.v ?? '').trim();
       const status = String(row.c?.[2]?.v ?? '').trim().toLowerCase();
       const uploader = String(row.c?.[3]?.v ?? '').trim();
-      return { Eingang: eingang, Bearbeiter: bearbeiter, Status: status, Uploader: uploader };
+      const gutachtenType = String(row.c?.[4]?.v ?? '').trim().toLowerCase();
+      return { Eingang: eingang, Bearbeiter: bearbeiter, Status: status, Uploader: uploader, GutachtenType: gutachtenType };
     }).filter((row) => row.Eingang && row.Eingang.toLowerCase() !== 'eingang');
 
     const cleanedRows = rows.filter((row) => isVisibleDashboardRow(row));
@@ -1234,6 +1240,7 @@ function buildBoardMap(data) {
       status,
       bearbeiter: row.Bearbeiter,
       uploader: row.Uploader || '',
+      gutachtenType: row.GutachtenType || '',
     };
 
     if (isGeprueftStatus(status)) {
@@ -1319,7 +1326,7 @@ function renderBoard(data) {
     bindColumnDrop(cardsWrap, col);
 
     map[col].forEach((item) => {
-      const { nummer, status, bearbeiter, uploader } = item;
+      const { nummer, status, bearbeiter, uploader, gutachtenType } = item;
       if (nummer.toLowerCase() === col.toLowerCase()) return;
 
       const card = document.createElement('div');
@@ -1345,6 +1352,18 @@ function renderBoard(data) {
       if (uploader) {
         const uploadHint = `Hochgeladen von ${uploader}`;
         card.title = card.title ? `${card.title} · ${uploadHint}` : uploadHint;
+      }
+
+      if (isWertgutachtenType(gutachtenType)) {
+        card.classList.add('card-wert');
+        const wertHint = 'Wertgutachten';
+        card.title = card.title ? `${card.title} · ${wertHint}` : wertHint;
+        const wertBadge = document.createElement('div');
+        wertBadge.className = 'wert-badge';
+        wertBadge.textContent = '€';
+        wertBadge.title = 'Wertgutachten';
+        wertBadge.setAttribute('aria-label', 'Wertgutachten');
+        card.appendChild(wertBadge);
       }
 
       if (isUnknownStatus(status)) {
