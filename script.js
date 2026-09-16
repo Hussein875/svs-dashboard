@@ -1335,7 +1335,7 @@ function renderBoard(data) {
     bindColumnDrop(cardsWrap, col);
 
     map[col].forEach((item) => {
-      const { nummer, status, bearbeiter, uploader, uploadShortcode, gutachtenType } = item;
+      const { nummer, status, bearbeiter, uploadShortcode, gutachtenType } = item;
       if (nummer.toLowerCase() === col.toLowerCase()) return;
 
       const card = document.createElement('div');
@@ -1361,10 +1361,6 @@ function renderBoard(data) {
       if (uploadShortcode) {
         const shortcodeHint = `Kürzel ${uploadShortcode}`;
         card.title = card.title ? `${card.title} · ${shortcodeHint}` : shortcodeHint;
-      }
-      if (uploader) {
-        const uploadHint = `Hochgeladen von ${uploader}`;
-        card.title = card.title ? `${card.title} · ${uploadHint}` : uploadHint;
       }
 
       if (isWertgutachtenType(gutachtenType)) {
