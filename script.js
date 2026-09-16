@@ -1380,6 +1380,11 @@ function renderBoard(data) {
         card.title = card.title ? `${card.title} · ${uploadHint}` : uploadHint;
       }
 
+      const uxSyncLabel = getUxSyncLabel(uxSync);
+      if (uxSyncLabel) {
+        card.title = card.title ? `${card.title} · ${uxSyncLabel}` : uxSyncLabel;
+      }
+
       if (isWertgutachtenType(gutachtenType)) {
         card.classList.add('card-wert');
         const wertHint = 'Wertgutachten';
@@ -1402,15 +1407,6 @@ function renderBoard(data) {
       }
 
       applyCardStatus(card, status);
-
-      const uxSyncLabel = getUxSyncLabel(uxSync);
-      if (uxSyncLabel) {
-        const uxBadge = document.createElement('div');
-        uxBadge.className = `ux-sync-badge ux-sync-${normalizeUxSyncStatus(uxSync) || 'pending'}`;
-        uxBadge.textContent = uxSyncLabel;
-        uxBadge.title = uxSyncLabel;
-        card.appendChild(uxBadge);
-      }
 
       const externalBadge = resolveExternalBadge(bearbeiter);
       if (externalBadge) {

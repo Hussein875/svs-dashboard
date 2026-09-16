@@ -658,41 +658,6 @@ html[data-kiosk="1"] .badge-admin-toggle {
   text-align: center;
 }
 
-.ux-sync-badge {
-  position: absolute;
-  right: 6px;
-  bottom: 5px;
-  max-width: calc(100% - 12px);
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.1px;
-  line-height: 1.35;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  pointer-events: none;
-}
-
-.ux-sync-pending {
-  color: #92400e;
-  background: rgba(251, 191, 36, 0.28);
-  border: 1px solid rgba(251, 191, 36, 0.45);
-}
-
-.ux-sync-ok {
-  color: #166534;
-  background: rgba(34, 197, 94, 0.2);
-  border: 1px solid rgba(34, 197, 94, 0.4);
-}
-
-.ux-sync-error {
-  color: #991b1b;
-  background: rgba(239, 68, 68, 0.2);
-  border: 1px solid rgba(239, 68, 68, 0.45);
-}
-
 .wert-legend-badge {
   display: inline-flex;
   align-items: center;
