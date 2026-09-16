@@ -577,7 +577,7 @@ function applyOptimisticAssign(akte, column) {
   lastBoardData = lastBoardData.map((row) => {
     if (normalizeAkteKey(row.Eingang) !== targetKey) return row;
     found = true;
-    return { ...row, Bearbeiter: sheetBearbeiter, UxSync: 'pending' };
+    return { ...row, Bearbeiter: sheetBearbeiter };
   });
 
   if (!found) return null;
@@ -971,23 +971,6 @@ function isWertgutachtenType(type) {
   return String(type || '').trim().toLowerCase() === 'wert';
 }
 
-function normalizeUxSyncStatus(status) {
-  return String(status || '').trim().toLowerCase();
-}
-
-function getUxSyncLabel(status) {
-  switch (normalizeUxSyncStatus(status)) {
-    case 'pending':
-      return 'Sheet ✓ · UX …';
-    case 'ok':
-      return 'Sheet ✓ · UX ✓';
-    case 'error':
-      return 'Sheet ✓ · UX ✗';
-    default:
-      return '';
-  }
-}
-
 function makeEmptyMap() {
   return columns.reduce((map, col) => {
     map[col] = [];
@@ -1154,10 +1137,9 @@ async function fetchData({ force = false } = {}) {
       const eingangRaw = row.c?.[0]?.v ?? '';
       const eingang = extractAktenzeichen(eingangRaw);
       const bearbeiter = String(row.c?.[1]?.v ?? '').trim();
-      const status = String(row.c?.[2]?.v ?? '').trim().toLowerCase();
+      const status = String(row.c?.[7]?.v ?? row.c?.[2]?.v ?? '').trim().toLowerCase();
       const uploader = String(row.c?.[3]?.v ?? '').trim();
       const gutachtenType = String(row.c?.[4]?.v ?? '').trim().toLowerCase();
-      const uxSync = normalizeUxSyncStatus(row.c?.[5]?.v ?? '');
       const uploadShortcode = String(row.c?.[6]?.v ?? '').trim().toUpperCase();
       return {
         Eingang: eingang,
@@ -1166,7 +1148,6 @@ async function fetchData({ force = false } = {}) {
         Uploader: uploader,
         UploadShortcode: uploadShortcode,
         GutachtenType: gutachtenType,
-        UxSync: uxSync,
       };
     }).filter((row) => row.Eingang && row.Eingang.toLowerCase() !== 'eingang');
 
@@ -1269,7 +1250,6 @@ function buildBoardMap(data) {
       uploader: row.Uploader || '',
       uploadShortcode: row.UploadShortcode || '',
       gutachtenType: row.GutachtenType || '',
-      uxSync: row.UxSync || '',
     };
 
     if (isGeprueftStatus(status)) {
@@ -1355,7 +1335,7 @@ function renderBoard(data) {
     bindColumnDrop(cardsWrap, col);
 
     map[col].forEach((item) => {
-      const { nummer, status, bearbeiter, uploader, uploadShortcode, gutachtenType, uxSync } = item;
+      const { nummer, status, bearbeiter, uploader, uploadShortcode, gutachtenType } = item;
       if (nummer.toLowerCase() === col.toLowerCase()) return;
 
       const card = document.createElement('div');
@@ -1385,11 +1365,6 @@ function renderBoard(data) {
       if (uploader) {
         const uploadHint = `Hochgeladen von ${uploader}`;
         card.title = card.title ? `${card.title} · ${uploadHint}` : uploadHint;
-      }
-
-      const uxSyncLabel = getUxSyncLabel(uxSync);
-      if (uxSyncLabel) {
-        card.title = card.title ? `${card.title} · ${uxSyncLabel}` : uxSyncLabel;
       }
 
       if (isWertgutachtenType(gutachtenType)) {
