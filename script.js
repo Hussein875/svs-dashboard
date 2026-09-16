@@ -1137,10 +1137,10 @@ async function fetchData({ force = false } = {}) {
       const eingangRaw = row.c?.[0]?.v ?? '';
       const eingang = extractAktenzeichen(eingangRaw);
       const bearbeiter = String(row.c?.[1]?.v ?? '').trim();
-      const status = String(row.c?.[7]?.v ?? row.c?.[2]?.v ?? '').trim().toLowerCase();
+      const status = String(row.c?.[2]?.v ?? '').trim().toLowerCase();
       const uploader = String(row.c?.[3]?.v ?? '').trim();
       const gutachtenType = String(row.c?.[4]?.v ?? '').trim().toLowerCase();
-      const uploadShortcode = String(row.c?.[6]?.v ?? '').trim().toUpperCase();
+      const uploadShortcode = String(row.c?.[5]?.v ?? '').trim().toUpperCase();
       return {
         Eingang: eingang,
         Bearbeiter: bearbeiter,
