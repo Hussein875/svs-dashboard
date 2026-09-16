@@ -577,7 +577,7 @@ function applyOptimisticAssign(akte, column) {
   lastBoardData = lastBoardData.map((row) => {
     if (normalizeAkteKey(row.Eingang) !== targetKey) return row;
     found = true;
-    return { ...row, Bearbeiter: sheetBearbeiter };
+    return { ...row, Bearbeiter: sheetBearbeiter, UxSync: 'pending' };
   });
 
   if (!found) return null;
@@ -971,6 +971,23 @@ function isWertgutachtenType(type) {
   return String(type || '').trim().toLowerCase() === 'wert';
 }
 
+function normalizeUxSyncStatus(status) {
+  return String(status || '').trim().toLowerCase();
+}
+
+function getUxSyncLabel(status) {
+  switch (normalizeUxSyncStatus(status)) {
+    case 'pending':
+      return 'Sheet ✓ · UX …';
+    case 'ok':
+      return 'Sheet ✓ · UX ✓';
+    case 'error':
+      return 'Sheet ✓ · UX ✗';
+    default:
+      return '';
+  }
+}
+
 function makeEmptyMap() {
   return columns.reduce((map, col) => {
     map[col] = [];
@@ -1140,7 +1157,15 @@ async function fetchData({ force = false } = {}) {
       const status = String(row.c?.[2]?.v ?? '').trim().toLowerCase();
       const uploader = String(row.c?.[3]?.v ?? '').trim();
       const gutachtenType = String(row.c?.[4]?.v ?? '').trim().toLowerCase();
-      return { Eingang: eingang, Bearbeiter: bearbeiter, Status: status, Uploader: uploader, GutachtenType: gutachtenType };
+      const uxSync = normalizeUxSyncStatus(row.c?.[5]?.v ?? '');
+      return {
+        Eingang: eingang,
+        Bearbeiter: bearbeiter,
+        Status: status,
+        Uploader: uploader,
+        GutachtenType: gutachtenType,
+        UxSync: uxSync,
+      };
     }).filter((row) => row.Eingang && row.Eingang.toLowerCase() !== 'eingang');
 
     const cleanedRows = rows.filter((row) => isVisibleDashboardRow(row));
@@ -1241,6 +1266,7 @@ function buildBoardMap(data) {
       bearbeiter: row.Bearbeiter,
       uploader: row.Uploader || '',
       gutachtenType: row.GutachtenType || '',
+      uxSync: row.UxSync || '',
     };
 
     if (isGeprueftStatus(status)) {
@@ -1326,7 +1352,7 @@ function renderBoard(data) {
     bindColumnDrop(cardsWrap, col);
 
     map[col].forEach((item) => {
-      const { nummer, status, bearbeiter, uploader, gutachtenType } = item;
+      const { nummer, status, bearbeiter, uploader, gutachtenType, uxSync } = item;
       if (nummer.toLowerCase() === col.toLowerCase()) return;
 
       const card = document.createElement('div');
@@ -1376,6 +1402,15 @@ function renderBoard(data) {
       }
 
       applyCardStatus(card, status);
+
+      const uxSyncLabel = getUxSyncLabel(uxSync);
+      if (uxSyncLabel) {
+        const uxBadge = document.createElement('div');
+        uxBadge.className = `ux-sync-badge ux-sync-${normalizeUxSyncStatus(uxSync) || 'pending'}`;
+        uxBadge.textContent = uxSyncLabel;
+        uxBadge.title = uxSyncLabel;
+        card.appendChild(uxBadge);
+      }
 
       const externalBadge = resolveExternalBadge(bearbeiter);
       if (externalBadge) {
