@@ -568,13 +568,7 @@ function applyOptimisticAssign(akte, column) {
   const targetKey = normalizeAkteKey(akte);
   if (!targetKey || !lastBoardData.length) return null;
 
-  const bearbeiter = columnToBearbeiter(column);
-  const sheetBearbeiter = bearbeiter === '' ? '' : ({
-    Hadi: 'Hadi Issa',
-    Ramazan: 'Ramazan Dag',
-    Robar: 'Robar Kassem',
-    Osama: 'Osama Sleiman',
-  }[bearbeiter] || bearbeiter);
+  const sheetBearbeiter = columnToBearbeiter(column);
   const snapshot = lastBoardData.map((row) => ({ ...row }));
   let found = false;
 
@@ -991,6 +985,12 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function appendCardTooltip(card, part) {
+  const hint = String(part || '').trim();
+  if (!hint) return;
+  card.title = card.title ? `${card.title} · ${hint}` : hint;
+}
+
 function setTickerText(text) {
   const ticker = document.querySelector('.ticker');
   if (!ticker) return;
@@ -1344,7 +1344,9 @@ function renderBoard(data) {
     bindColumnDrop(cardsWrap, col);
 
     map[col].forEach((item) => {
-      const { nummer, status, bearbeiter, gutachtenType } = item;
+      const {
+        nummer, status, bearbeiter, uploader, uploadShortcode, gutachtenType,
+      } = item;
       if (nummer.toLowerCase() === col.toLowerCase()) return;
 
       const card = document.createElement('div');
@@ -1364,13 +1366,35 @@ function renderBoard(data) {
 
       if (ageDays !== null && ageDays >= AGE_HINT_DAYS) {
         card.classList.add('card-aged');
+        appendCardTooltip(
+          card,
+          ageDays === 1 ? 'Seit 1 Tag im System' : `Seit ${ageDays} Tagen im System`,
+        );
+      }
+
+      if (status) {
+        appendCardTooltip(card, `Status: ${status}`);
+      }
+
+      if (bearbeiter) {
+        appendCardTooltip(card, `Bearbeiter: ${bearbeiter}`);
+      }
+
+      if (uploadShortcode) {
+        appendCardTooltip(card, `Kürzel ${uploadShortcode}`);
+      }
+
+      if (uploader) {
+        appendCardTooltip(card, `Hochgeladen von ${uploader}`);
       }
 
       if (isWertgutachtenType(gutachtenType)) {
         card.classList.add('card-wert');
+        appendCardTooltip(card, 'Wertgutachten');
         const wertBadge = document.createElement('div');
         wertBadge.className = 'wert-badge';
         wertBadge.textContent = '€';
+        wertBadge.title = 'Wertgutachten';
         wertBadge.setAttribute('aria-label', 'Wertgutachten');
         card.appendChild(wertBadge);
       }
@@ -1380,6 +1404,7 @@ function renderBoard(data) {
         const unknownBadge = document.createElement('div');
         unknownBadge.className = 'unknown-badge';
         unknownBadge.textContent = '?';
+        unknownBadge.title = 'Status unbekannt – UX-Sync prüfen';
         card.appendChild(unknownBadge);
       }
 
