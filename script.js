@@ -6,7 +6,7 @@ const AGE_HINT_DAYS = 3;
 const SHEET_ID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 const IMPORT_LOG_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=A2:C`;
-const IMPORT_RUN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=F1`;
+const IMPORT_RUN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=G1`;
 const TAGES_STAT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=H2:K`;
 const ABSENCE_BADGES_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=L2:N5`;
 
@@ -1158,11 +1158,13 @@ async function fetchData({ force = false } = {}) {
       const uploader = String(row.c?.[3]?.v ?? '').trim();
       const gutachtenType = String(row.c?.[4]?.v ?? '').trim().toLowerCase();
       const uxSync = normalizeUxSyncStatus(row.c?.[5]?.v ?? '');
+      const uploadShortcode = String(row.c?.[6]?.v ?? '').trim().toUpperCase();
       return {
         Eingang: eingang,
         Bearbeiter: bearbeiter,
         Status: status,
         Uploader: uploader,
+        UploadShortcode: uploadShortcode,
         GutachtenType: gutachtenType,
         UxSync: uxSync,
       };
@@ -1265,6 +1267,7 @@ function buildBoardMap(data) {
       status,
       bearbeiter: row.Bearbeiter,
       uploader: row.Uploader || '',
+      uploadShortcode: row.UploadShortcode || '',
       gutachtenType: row.GutachtenType || '',
       uxSync: row.UxSync || '',
     };
@@ -1352,7 +1355,7 @@ function renderBoard(data) {
     bindColumnDrop(cardsWrap, col);
 
     map[col].forEach((item) => {
-      const { nummer, status, bearbeiter, uploader, gutachtenType, uxSync } = item;
+      const { nummer, status, bearbeiter, uploader, uploadShortcode, gutachtenType, uxSync } = item;
       if (nummer.toLowerCase() === col.toLowerCase()) return;
 
       const card = document.createElement('div');
@@ -1375,6 +1378,10 @@ function renderBoard(data) {
         card.title = ageDays === 1 ? 'Seit 1 Tag im System' : `Seit ${ageDays} Tagen im System`;
       }
 
+      if (uploadShortcode) {
+        const shortcodeHint = `Kürzel ${uploadShortcode}`;
+        card.title = card.title ? `${card.title} · ${shortcodeHint}` : shortcodeHint;
+      }
       if (uploader) {
         const uploadHint = `Hochgeladen von ${uploader}`;
         card.title = card.title ? `${card.title} · ${uploadHint}` : uploadHint;
