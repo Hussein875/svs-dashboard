@@ -4,7 +4,7 @@ const FETCH_TIMEOUT_MS = 25_000;
 const SCRIPT_STALE_MS = 15 * 60_000;
 const AGE_HINT_DAYS = 3;
 const SHEET_ID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
-const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A2:F`;
 const IMPORT_LOG_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=A2:C`;
 const IMPORT_RUN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=G1`;
 const TAGES_STAT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=H2:K`;
@@ -1149,7 +1149,11 @@ async function fetchData({ force = false } = {}) {
         UploadShortcode: uploadShortcode,
         GutachtenType: gutachtenType,
       };
-    }).filter((row) => row.Eingang && row.Eingang.toLowerCase() !== 'eingang');
+    }).filter((row) => {
+      if (!row.Eingang) return false;
+      const lower = row.Eingang.toLowerCase();
+      return lower !== 'eingang' && lower !== 'aktennummer' && /\d/.test(row.Eingang);
+    });
 
     const cleanedRows = rows.filter((row) => isVisibleDashboardRow(row));
     setOpenCount(cleanedRows.length);
