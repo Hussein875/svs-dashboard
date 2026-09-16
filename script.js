@@ -4,9 +4,9 @@ const FETCH_TIMEOUT_MS = 25_000;
 const SCRIPT_STALE_MS = 15 * 60_000;
 const AGE_HINT_DAYS = 3;
 const SHEET_ID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
-const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A2:F`;
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A1:E`;
 const DASHBOARD_HEADER_LABELS = new Set([
-  'aktennummer', 'bearbeiter', 'status', 'hochgeladen_von',
+  'aktennummer', 'bearbeiter', 'status',
   'gutachten-typ', 'gutachten_typ', 'kürzel', 'kurzel', 'eingang', 'nummer',
 ]);
 const IMPORT_LOG_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=A2:C`;
@@ -1142,14 +1142,12 @@ async function fetchData({ force = false } = {}) {
       const eingang = extractAktenzeichen(eingangRaw);
       const bearbeiter = String(row.c?.[1]?.v ?? '').trim();
       const status = String(row.c?.[2]?.v ?? '').trim().toLowerCase();
-      const uploader = String(row.c?.[3]?.v ?? '').trim();
-      const gutachtenType = String(row.c?.[4]?.v ?? '').trim().toLowerCase();
-      const uploadShortcode = String(row.c?.[5]?.v ?? '').trim().toUpperCase();
+      const gutachtenType = String(row.c?.[3]?.v ?? '').trim().toLowerCase();
+      const uploadShortcode = String(row.c?.[4]?.v ?? '').trim().toUpperCase();
       return {
         Eingang: eingang,
         Bearbeiter: bearbeiter,
         Status: status,
-        Uploader: uploader,
         UploadShortcode: uploadShortcode,
         GutachtenType: gutachtenType,
       };
@@ -1256,7 +1254,6 @@ function buildBoardMap(data) {
       nummer: row.Eingang,
       status,
       bearbeiter: row.Bearbeiter,
-      uploader: row.Uploader || '',
       uploadShortcode: row.UploadShortcode || '',
       gutachtenType: row.GutachtenType || '',
     };
@@ -1345,7 +1342,7 @@ function renderBoard(data) {
 
     map[col].forEach((item) => {
       const {
-        nummer, status, bearbeiter, uploader, uploadShortcode, gutachtenType,
+        nummer, status, bearbeiter, uploadShortcode, gutachtenType,
       } = item;
       if (nummer.toLowerCase() === col.toLowerCase()) return;
 
@@ -1382,10 +1379,6 @@ function renderBoard(data) {
 
       if (uploadShortcode) {
         appendCardTooltip(card, `Kürzel ${uploadShortcode}`);
-      }
-
-      if (uploader) {
-        appendCardTooltip(card, `Hochgeladen von ${uploader}`);
       }
 
       if (isWertgutachtenType(gutachtenType)) {
