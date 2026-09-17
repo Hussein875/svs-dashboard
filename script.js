@@ -3,6 +3,10 @@ const FETCH_INTERVAL_MS = 60_000;
 const FETCH_TIMEOUT_MS = 25_000;
 const SCRIPT_STALE_MS = 15 * 60_000;
 const AGE_HINT_DAYS = 3;
+const SILENT_AKTE_DAYS = 7;
+const AKTEN_MILESTONE_2000 = 2000;
+const SESSION_PEAK_KEY = 'svs-dashboard-session-peak';
+const SOUND_PREF_KEY = 'svs-dashboard-sound-enabled';
 const SHEET_ID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A1:E`;
 const DASHBOARD_HEADER_LABELS = new Set([
@@ -227,6 +231,8 @@ let adminUnlocked = false;
 let pinSubmitInFlight = false;
 let badgeSaveInFlight = false;
 const assignInFlightKeys = new Set();
+let milestoneSparkleTimer = null;
+let confettiCanvas = null;
 
 function getAdminToken() {
   try {
@@ -991,14 +997,180 @@ function appendCardTooltip(card, part) {
   card.title = card.title ? `${card.title} · ${hint}` : hint;
 }
 
-function setTickerText(text) {
+function prefersReducedEffects() {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (_) {
+    return false;
+  }
+}
+
+function canPlayMilestoneEffects() {
+  if (document.hidden || prefersReducedEffects()) return false;
+  try {
+    if (localStorage.getItem(SOUND_PREF_KEY) === '0') return false;
+  } catch (_) {
+    /* localStorage blockiert */
+  }
+  return true;
+}
+
+function playMilestoneChime() {
+  if (!canPlayMilestoneEffects()) return;
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    [523.25, 659.25, 783.99].forEach((freq, index) => {
+      const start = now + index * 0.09;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.11, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.34);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + 0.36);
+    });
+    window.setTimeout(() => ctx.close(), 1200);
+  } catch (_) {
+    /* Audio nicht verfügbar */
+  }
+}
+
+function ensureConfettiCanvas() {
+  if (confettiCanvas) return confettiCanvas;
+  const canvas = document.createElement('canvas');
+  canvas.id = 'confettiCanvas';
+  canvas.className = 'confetti-canvas';
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  document.body.appendChild(canvas);
+  confettiCanvas = canvas;
+  window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  });
+  return canvas;
+}
+
+function launchConfetti({ origin = null, count = 70, duration = 2400 } = {}) {
+  if (prefersReducedEffects()) return;
+  const rect = origin?.getBoundingClientRect?.();
+  const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
+  const y = rect ? rect.top + rect.height / 2 : 56;
+  const canvas = ensureConfettiCanvas();
+  const ctx = canvas.getContext('2d');
+  const colors = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#a855f7', '#eab308'];
+  const particles = Array.from({ length: count }, () => ({
+    x,
+    y,
+    vx: (Math.random() - 0.5) * 9,
+    vy: Math.random() * -9 - 2,
+    rot: Math.random() * 360,
+    vr: (Math.random() - 0.5) * 12,
+    size: Math.random() * 6 + 4,
+    color: colors[Math.floor(Math.random() * colors.length)],
+  }));
+  const start = performance.now();
+
+  function frame(now) {
+    const elapsed = now - start;
+    if (elapsed > duration) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      return;
+    }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const fade = 1 - elapsed / duration;
+    particles.forEach((particle) => {
+      particle.x += particle.vx;
+      particle.y += particle.vy;
+      particle.vy += 0.18;
+      particle.rot += particle.vr;
+      ctx.save();
+      ctx.translate(particle.x, particle.y);
+      ctx.rotate((particle.rot * Math.PI) / 180);
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = particle.color;
+      ctx.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size * 0.65);
+      ctx.restore();
+    });
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+function readSessionPeakAkte() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_PEAK_KEY);
+    if (raw === null) return null;
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeSessionPeakAkte(peak) {
+  try {
+    sessionStorage.setItem(SESSION_PEAK_KEY, String(peak));
+  } catch (_) {
+    /* sessionStorage blockiert */
+  }
+}
+
+function scheduleMilestoneSparkles() {
+  if (milestoneSparkleTimer) return;
+  milestoneSparkleTimer = window.setInterval(() => {
+    if (!canPlayMilestoneEffects()) return;
+    const tickerSpan = document.querySelector('.ticker-span');
+    if (!tickerSpan) return;
+    launchConfetti({ origin: tickerSpan, count: 18, duration: 1200 });
+  }, 90_000);
+}
+
+function handleAktenPeakChange(currentPeak) {
+  if (currentPeak == null || !Number.isFinite(currentPeak)) return;
+
+  const sessionPeak = readSessionPeakAkte();
+  if (sessionPeak !== null && currentPeak > sessionPeak) {
+    playMilestoneChime();
+    if (currentPeak >= AKTEN_MILESTONE_2000 && sessionPeak < AKTEN_MILESTONE_2000) {
+      const tickerSpan = document.querySelector('.ticker-span');
+      launchConfetti({ origin: tickerSpan, count: 140, duration: 3800 });
+    }
+  }
+
+  if (currentPeak >= AKTEN_MILESTONE_2000) {
+    scheduleMilestoneSparkles();
+  }
+
+  writeSessionPeakAkte(currentPeak);
+}
+
+function setTickerText(nextNumber, peakAkte = null) {
   const ticker = document.querySelector('.ticker');
   if (!ticker) return;
 
   ticker.textContent = '';
   const span = document.createElement('span');
   span.className = 'ticker-span';
-  span.textContent = text;
+
+  const peak = Number.isFinite(peakAkte) ? peakAkte : null;
+  const atMilestone = peak !== null && peak >= AKTEN_MILESTONE_2000;
+  const displayNumber = escapeHtml(String(nextNumber));
+
+  if (atMilestone) {
+    span.classList.add('ticker-milestone');
+    span.innerHTML = `🎉 Aktuelle Nummer: <span class="ticker-akte-milestone">${displayNumber}</span> 🚗`;
+  } else {
+    span.textContent = `💥 Aktuelle Nummer: ${nextNumber} 🚗`;
+  }
+
   ticker.appendChild(span);
   startTickerAnimation();
 }
@@ -1167,8 +1339,10 @@ async function fetchData({ force = false } = {}) {
       .map((num) => Number.parseInt(num, 10))
       .filter((num) => Number.isFinite(num));
 
-    const nextNumber = numbers.length ? Math.max(...numbers) + 1 : '–';
-    setTickerText(`💥 Aktuelle Nummer: ${nextNumber} 🚗`);
+    const currentPeak = numbers.length ? Math.max(...numbers) : null;
+    const nextNumber = currentPeak !== null ? currentPeak + 1 : '–';
+    setTickerText(nextNumber, currentPeak);
+    handleAktenPeakChange(currentPeak);
 
     await fetchAbsenceBadges({ force });
 
@@ -1361,7 +1535,19 @@ function renderBoard(data) {
       const importDate = aktenNummer ? importDateByAkte.get(aktenNummer) : null;
       const ageDays = getAgeDays(importDate);
 
-      if (ageDays !== null && ageDays >= AGE_HINT_DAYS) {
+      if (ageDays !== null && ageDays >= SILENT_AKTE_DAYS) {
+        card.classList.add('card-silent');
+        appendCardTooltip(
+          card,
+          ageDays === 1 ? 'Seit 1 Tag ohne Bewegung' : `Seit ${ageDays} Tagen ohne Bewegung`,
+        );
+        const silentBadge = document.createElement('span');
+        silentBadge.className = 'silent-badge';
+        silentBadge.textContent = '⏳';
+        silentBadge.title = 'Stille Akte';
+        silentBadge.setAttribute('aria-label', 'Stille Akte');
+        card.appendChild(silentBadge);
+      } else if (ageDays !== null && ageDays >= AGE_HINT_DAYS) {
         card.classList.add('card-aged');
         appendCardTooltip(
           card,
