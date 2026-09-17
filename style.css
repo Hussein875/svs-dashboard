@@ -344,6 +344,12 @@ html[data-kiosk="1"] .badge-admin-toggle {
   letter-spacing: 0.2px;
 }
 
+.ticker-milestone-test {
+  outline: 1px dashed rgba(245, 158, 11, 0.45);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
 .ticker-akte-milestone {
   display: inline-block;
   font-weight: 900;

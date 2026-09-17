@@ -5,8 +5,28 @@ const SCRIPT_STALE_MS = 15 * 60_000;
 const AGE_HINT_DAYS = 3;
 const SILENT_AKTE_DAYS = 7;
 const AKTEN_MILESTONE_2000 = 2000;
+const MILESTONE_PARTY_BURST_MS = 3800;
+const MILESTONE_SPARKLE_INTERVAL_MS = 90_000;
+const MILESTONE_SPARKLE_BURST_MS = 1200;
 const SESSION_PEAK_KEY = 'svs-dashboard-session-peak';
 const SOUND_PREF_KEY = 'svs-dashboard-sound-enabled';
+
+function resolveMilestoneConfig() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const milestoneRaw = params.get('milestone');
+    const partyTest = params.get('partyTest');
+    const partyDemo = params.get('partyDemo') === '1' || partyTest === '1';
+    const thresholdRaw = milestoneRaw || partyTest;
+    const parsed = thresholdRaw ? Number.parseInt(thresholdRaw, 10) : AKTEN_MILESTONE_2000;
+    const threshold = Number.isFinite(parsed) && parsed > 0 ? parsed : AKTEN_MILESTONE_2000;
+    return { threshold, partyDemo };
+  } catch (_) {
+    return { threshold: AKTEN_MILESTONE_2000, partyDemo: false };
+  }
+}
+
+const milestoneConfig = resolveMilestoneConfig();
 const SHEET_ID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A1:E`;
 const DASHBOARD_HEADER_LABELS = new Set([
@@ -233,6 +253,7 @@ let badgeSaveInFlight = false;
 const assignInFlightKeys = new Set();
 let milestoneSparkleTimer = null;
 let confettiCanvas = null;
+let partyDemoTriggered = false;
 
 function getAdminToken() {
   try {
@@ -1123,29 +1144,74 @@ function writeSessionPeakAkte(peak) {
   }
 }
 
+function getMilestoneThreshold() {
+  return milestoneConfig.threshold;
+}
+
+function isAtMilestonePeak(peak) {
+  return peak !== null && Number.isFinite(peak) && peak >= getMilestoneThreshold();
+}
+
+function triggerMilestonePartyBurst() {
+  const tickerSpan = document.querySelector('.ticker-span');
+  playMilestoneChime();
+  launchConfetti({
+    origin: tickerSpan,
+    count: 140,
+    duration: MILESTONE_PARTY_BURST_MS,
+  });
+  scheduleMilestoneSparkles();
+  window.setTimeout(() => {
+    if (!canPlayMilestoneEffects()) return;
+    launchConfetti({
+      origin: tickerSpan,
+      count: 24,
+      duration: MILESTONE_SPARKLE_BURST_MS,
+    });
+  }, MILESTONE_PARTY_BURST_MS + 200);
+}
+
 function scheduleMilestoneSparkles() {
   if (milestoneSparkleTimer) return;
   milestoneSparkleTimer = window.setInterval(() => {
     if (!canPlayMilestoneEffects()) return;
     const tickerSpan = document.querySelector('.ticker-span');
     if (!tickerSpan) return;
-    launchConfetti({ origin: tickerSpan, count: 18, duration: 1200 });
-  }, 90_000);
+    launchConfetti({
+      origin: tickerSpan,
+      count: 18,
+      duration: MILESTONE_SPARKLE_BURST_MS,
+    });
+  }, MILESTONE_SPARKLE_INTERVAL_MS);
 }
 
 function handleAktenPeakChange(currentPeak) {
+  const threshold = getMilestoneThreshold();
+
+  if (milestoneConfig.partyDemo && !partyDemoTriggered) {
+    partyDemoTriggered = true;
+    writeSessionPeakAkte(threshold - 1);
+    triggerMilestonePartyBurst();
+    writeSessionPeakAkte(Math.max(currentPeak ?? threshold, threshold));
+    return;
+  }
+
   if (currentPeak == null || !Number.isFinite(currentPeak)) return;
 
   const sessionPeak = readSessionPeakAkte();
   if (sessionPeak !== null && currentPeak > sessionPeak) {
     playMilestoneChime();
-    if (currentPeak >= AKTEN_MILESTONE_2000 && sessionPeak < AKTEN_MILESTONE_2000) {
+    if (currentPeak >= threshold && sessionPeak < threshold) {
       const tickerSpan = document.querySelector('.ticker-span');
-      launchConfetti({ origin: tickerSpan, count: 140, duration: 3800 });
+      launchConfetti({
+        origin: tickerSpan,
+        count: 140,
+        duration: MILESTONE_PARTY_BURST_MS,
+      });
     }
   }
 
-  if (currentPeak >= AKTEN_MILESTONE_2000) {
+  if (isAtMilestonePeak(currentPeak)) {
     scheduleMilestoneSparkles();
   }
 
@@ -1161,12 +1227,17 @@ function setTickerText(nextNumber, peakAkte = null) {
   span.className = 'ticker-span';
 
   const peak = Number.isFinite(peakAkte) ? peakAkte : null;
-  const atMilestone = peak !== null && peak >= AKTEN_MILESTONE_2000;
+  const threshold = getMilestoneThreshold();
+  const atMilestone = isAtMilestonePeak(peak) || milestoneConfig.partyDemo;
   const displayNumber = escapeHtml(String(nextNumber));
 
   if (atMilestone) {
     span.classList.add('ticker-milestone');
+    if (milestoneConfig.partyDemo) span.classList.add('ticker-milestone-test');
     span.innerHTML = `🎉 Aktuelle Nummer: <span class="ticker-akte-milestone">${displayNumber}</span> 🚗`;
+    if (milestoneConfig.partyDemo) {
+      span.title = `Party-Test für Meilenstein ${threshold}`;
+    }
   } else {
     span.textContent = `💥 Aktuelle Nummer: ${nextNumber} 🚗`;
   }
