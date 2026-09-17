@@ -4,29 +4,8 @@ const FETCH_TIMEOUT_MS = 25_000;
 const SCRIPT_STALE_MS = 15 * 60_000;
 const AGE_HINT_DAYS = 3;
 const SILENT_AKTE_DAYS = 7;
-const AKTEN_MILESTONE_2000 = 2000;
-const MILESTONE_PARTY_BURST_MS = 3800;
-const MILESTONE_SPARKLE_INTERVAL_MS = 90_000;
-const MILESTONE_SPARKLE_BURST_MS = 1200;
 const SESSION_PEAK_KEY = 'svs-dashboard-session-peak';
 const SOUND_PREF_KEY = 'svs-dashboard-sound-enabled';
-
-function resolveMilestoneConfig() {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const milestoneRaw = params.get('milestone');
-    const partyTest = params.get('partyTest');
-    const partyDemo = params.get('partyDemo') === '1' || partyTest === '1';
-    const thresholdRaw = milestoneRaw || partyTest;
-    const parsed = thresholdRaw ? Number.parseInt(thresholdRaw, 10) : AKTEN_MILESTONE_2000;
-    const threshold = Number.isFinite(parsed) && parsed > 0 ? parsed : AKTEN_MILESTONE_2000;
-    return { threshold, partyDemo };
-  } catch (_) {
-    return { threshold: AKTEN_MILESTONE_2000, partyDemo: false };
-  }
-}
-
-const milestoneConfig = resolveMilestoneConfig();
 const SHEET_ID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A1:E`;
 const DASHBOARD_HEADER_LABELS = new Set([
@@ -251,10 +230,6 @@ let adminUnlocked = false;
 let pinSubmitInFlight = false;
 let badgeSaveInFlight = false;
 const assignInFlightKeys = new Set();
-let milestoneSparkleTimer = null;
-let confettiCanvas = null;
-let partyDemoTriggered = false;
-
 function getAdminToken() {
   try {
     return sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
@@ -1026,7 +1001,7 @@ function prefersReducedEffects() {
   }
 }
 
-function canPlayMilestoneEffects() {
+function canPlayAkteChime() {
   if (document.hidden || prefersReducedEffects()) return false;
   try {
     if (localStorage.getItem(SOUND_PREF_KEY) === '0') return false;
@@ -1036,8 +1011,8 @@ function canPlayMilestoneEffects() {
   return true;
 }
 
-function playMilestoneChime() {
-  if (!canPlayMilestoneEffects()) return;
+function playNewAkteChime() {
+  if (!canPlayAkteChime()) return;
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return;
@@ -1063,68 +1038,6 @@ function playMilestoneChime() {
   }
 }
 
-function ensureConfettiCanvas() {
-  if (confettiCanvas) return confettiCanvas;
-  const canvas = document.createElement('canvas');
-  canvas.id = 'confettiCanvas';
-  canvas.className = 'confetti-canvas';
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  document.body.appendChild(canvas);
-  confettiCanvas = canvas;
-  window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  });
-  return canvas;
-}
-
-function launchConfetti({ origin = null, count = 70, duration = 2400 } = {}) {
-  if (prefersReducedEffects()) return;
-  const rect = origin?.getBoundingClientRect?.();
-  const x = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
-  const y = rect ? rect.top + rect.height / 2 : 56;
-  const canvas = ensureConfettiCanvas();
-  const ctx = canvas.getContext('2d');
-  const colors = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#a855f7', '#eab308'];
-  const particles = Array.from({ length: count }, () => ({
-    x,
-    y,
-    vx: (Math.random() - 0.5) * 9,
-    vy: Math.random() * -9 - 2,
-    rot: Math.random() * 360,
-    vr: (Math.random() - 0.5) * 12,
-    size: Math.random() * 6 + 4,
-    color: colors[Math.floor(Math.random() * colors.length)],
-  }));
-  const start = performance.now();
-
-  function frame(now) {
-    const elapsed = now - start;
-    if (elapsed > duration) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      return;
-    }
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const fade = 1 - elapsed / duration;
-    particles.forEach((particle) => {
-      particle.x += particle.vx;
-      particle.y += particle.vy;
-      particle.vy += 0.18;
-      particle.rot += particle.vr;
-      ctx.save();
-      ctx.translate(particle.x, particle.y);
-      ctx.rotate((particle.rot * Math.PI) / 180);
-      ctx.globalAlpha = fade;
-      ctx.fillStyle = particle.color;
-      ctx.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size * 0.65);
-      ctx.restore();
-    });
-    requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-}
-
 function readSessionPeakAkte() {
   try {
     const raw = sessionStorage.getItem(SESSION_PEAK_KEY);
@@ -1144,104 +1057,25 @@ function writeSessionPeakAkte(peak) {
   }
 }
 
-function getMilestoneThreshold() {
-  return milestoneConfig.threshold;
-}
-
-function isAtMilestonePeak(peak) {
-  return peak !== null && Number.isFinite(peak) && peak >= getMilestoneThreshold();
-}
-
-function triggerMilestonePartyBurst() {
-  const tickerSpan = document.querySelector('.ticker-span');
-  playMilestoneChime();
-  launchConfetti({
-    origin: tickerSpan,
-    count: 140,
-    duration: MILESTONE_PARTY_BURST_MS,
-  });
-  scheduleMilestoneSparkles();
-  window.setTimeout(() => {
-    if (!canPlayMilestoneEffects()) return;
-    launchConfetti({
-      origin: tickerSpan,
-      count: 24,
-      duration: MILESTONE_SPARKLE_BURST_MS,
-    });
-  }, MILESTONE_PARTY_BURST_MS + 200);
-}
-
-function scheduleMilestoneSparkles() {
-  if (milestoneSparkleTimer) return;
-  milestoneSparkleTimer = window.setInterval(() => {
-    if (!canPlayMilestoneEffects()) return;
-    const tickerSpan = document.querySelector('.ticker-span');
-    if (!tickerSpan) return;
-    launchConfetti({
-      origin: tickerSpan,
-      count: 18,
-      duration: MILESTONE_SPARKLE_BURST_MS,
-    });
-  }, MILESTONE_SPARKLE_INTERVAL_MS);
-}
-
 function handleAktenPeakChange(currentPeak) {
-  const threshold = getMilestoneThreshold();
-
-  if (milestoneConfig.partyDemo && !partyDemoTriggered) {
-    partyDemoTriggered = true;
-    writeSessionPeakAkte(threshold - 1);
-    triggerMilestonePartyBurst();
-    writeSessionPeakAkte(Math.max(currentPeak ?? threshold, threshold));
-    return;
-  }
-
   if (currentPeak == null || !Number.isFinite(currentPeak)) return;
 
   const sessionPeak = readSessionPeakAkte();
   if (sessionPeak !== null && currentPeak > sessionPeak) {
-    playMilestoneChime();
-    if (currentPeak >= threshold && sessionPeak < threshold) {
-      const tickerSpan = document.querySelector('.ticker-span');
-      launchConfetti({
-        origin: tickerSpan,
-        count: 140,
-        duration: MILESTONE_PARTY_BURST_MS,
-      });
-    }
-  }
-
-  if (isAtMilestonePeak(currentPeak)) {
-    scheduleMilestoneSparkles();
+    playNewAkteChime();
   }
 
   writeSessionPeakAkte(currentPeak);
 }
 
-function setTickerText(nextNumber, peakAkte = null) {
+function setTickerText(nextNumber) {
   const ticker = document.querySelector('.ticker');
   if (!ticker) return;
 
   ticker.textContent = '';
   const span = document.createElement('span');
   span.className = 'ticker-span';
-
-  const peak = Number.isFinite(peakAkte) ? peakAkte : null;
-  const threshold = getMilestoneThreshold();
-  const atMilestone = isAtMilestonePeak(peak) || milestoneConfig.partyDemo;
-  const displayNumber = escapeHtml(String(nextNumber));
-
-  if (atMilestone) {
-    span.classList.add('ticker-milestone');
-    if (milestoneConfig.partyDemo) span.classList.add('ticker-milestone-test');
-    span.innerHTML = `🎉 Aktuelle Nummer: <span class="ticker-akte-milestone">${displayNumber}</span> 🚗`;
-    if (milestoneConfig.partyDemo) {
-      span.title = `Party-Test für Meilenstein ${threshold}`;
-    }
-  } else {
-    span.textContent = `💥 Aktuelle Nummer: ${nextNumber} 🚗`;
-  }
-
+  span.textContent = `💥 Aktuelle Nummer: ${nextNumber} 🚗`;
   ticker.appendChild(span);
   startTickerAnimation();
 }
@@ -1412,7 +1246,7 @@ async function fetchData({ force = false } = {}) {
 
     const currentPeak = numbers.length ? Math.max(...numbers) : null;
     const nextNumber = currentPeak !== null ? currentPeak + 1 : '–';
-    setTickerText(nextNumber, currentPeak);
+    setTickerText(nextNumber);
     handleAktenPeakChange(currentPeak);
 
     await fetchAbsenceBadges({ force });
