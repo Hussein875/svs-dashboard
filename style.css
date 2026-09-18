@@ -364,6 +364,16 @@ html[data-kiosk="1"] .badge-admin-toggle {
   opacity: 0.75;
 }
 
+.legend-item > :first-child {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
 .dot {
   display: inline-block;
   width: 8px;
@@ -708,43 +718,34 @@ html[data-kiosk="1"] .badge-admin-toggle {
 }
 
 .gutachten-legend-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  width: 16px;
   min-width: 16px;
   height: 16px;
-  padding: 0 3px;
+  padding: 0;
   border-radius: 999px;
   color: #fff;
   font-size: 9px;
   font-weight: 800;
   line-height: 1;
-  vertical-align: middle;
 }
 
 .gutachten-legend-wert {
   background: #9333ea;
-  font-size: 10px;
 }
 
 .gutachten-legend-kva {
   background: #d97706;
-  font-size: 10px;
+  font-size: 8px;
 }
 
 .gutachten-legend-kasko {
   background: #2563eb;
-  font-size: 11px;
+  font-size: 9px;
 }
 
 .silent-legend-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1;
-  vertical-align: middle;
   opacity: 0.85;
 }
 
