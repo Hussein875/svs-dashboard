@@ -7,7 +7,7 @@ const SILENT_AKTE_DAYS = 7;
 const SESSION_PEAK_KEY = 'svs-dashboard-session-peak';
 const SOUND_PREF_KEY = 'svs-dashboard-sound-enabled';
 const SHEET_ID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
-const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A1:F`;
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A1:E`;
 const DASHBOARD_HEADER_LABELS = new Set([
   'aktennummer', 'bearbeiter', 'status',
   'gutachten-typ', 'gutachten_typ', 'kürzel', 'kurzel', 'hochgeladen_von',
@@ -1241,13 +1241,11 @@ async function fetchData({ force = false } = {}) {
       const bearbeiter = String(row.c?.[1]?.v ?? '').trim();
       const status = String(row.c?.[2]?.v ?? '').trim().toLowerCase();
       const gutachtenType = String(row.c?.[3]?.v ?? '').trim().toLowerCase();
-      const uploadShortcode = String(row.c?.[4]?.v ?? '').trim().toUpperCase();
-      const uploader = String(row.c?.[5]?.v ?? '').trim();
+      const uploader = String(row.c?.[4]?.v ?? '').trim();
       return {
         Eingang: eingang,
         Bearbeiter: bearbeiter,
         Status: status,
-        UploadShortcode: uploadShortcode,
         GutachtenType: gutachtenType,
         Uploader: uploader,
       };
@@ -1356,7 +1354,6 @@ function buildBoardMap(data) {
       nummer: row.Eingang,
       status,
       bearbeiter: row.Bearbeiter,
-      uploadShortcode: row.UploadShortcode || '',
       gutachtenType: row.GutachtenType || '',
       uploader: row.Uploader || '',
     };
@@ -1445,7 +1442,7 @@ function renderBoard(data) {
 
     map[col].forEach((item) => {
       const {
-        nummer, status, bearbeiter, uploadShortcode, gutachtenType, uploader,
+        nummer, status, bearbeiter, gutachtenType, uploader,
       } = item;
       if (nummer.toLowerCase() === col.toLowerCase()) return;
 
@@ -1490,10 +1487,6 @@ function renderBoard(data) {
 
       if (bearbeiter) {
         appendCardTooltip(card, `Bearbeiter: ${bearbeiter}`);
-      }
-
-      if (uploadShortcode) {
-        appendCardTooltip(card, `Kürzel ${uploadShortcode}`);
       }
 
       if (isWertgutachtenType(gutachtenType)) {
