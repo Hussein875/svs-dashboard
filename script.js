@@ -7,7 +7,7 @@ const SILENT_AKTE_DAYS = 7;
 const SESSION_PEAK_KEY = 'svs-dashboard-session-peak';
 const SOUND_PREF_KEY = 'svs-dashboard-sound-enabled';
 const SHEET_ID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
-const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A1:E`;
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A1:F`;
 const DASHBOARD_HEADER_LABELS = new Set([
   'aktennummer', 'bearbeiter', 'status',
   'gutachten-typ', 'gutachten_typ', 'kürzel', 'kurzel', 'hochgeladen_von',
@@ -91,6 +91,10 @@ const uploaderBadgeAliases = new Map([
   ['mohammed zahredine', { cls: 'mohamad', label: 'M' }],
   ['svs app', { cls: 'svs', label: 'App' }],
   ['bot', { cls: 'bot', label: 'Bot' }],
+]);
+
+const uploaderAccountAliases = new Map([
+  ['hj251092', { cls: 'hj', label: 'HJ' }],
 ]);
 
 const BADGE_CONFIG_COLUMNS = ['Hadi', 'Ramazan', 'Robar', 'Osama'];
@@ -1176,10 +1180,27 @@ function resolveWorkerColumn(rawWorker) {
   return null;
 }
 
-function resolveUploaderBadge(rawUploader) {
+function normalizeUploaderAccount(rawValue) {
+  return String(rawValue || '').trim().toLowerCase().split('@')[0];
+}
+
+function resolveUploaderBadgeFromAccount(rawAccount) {
+  const account = normalizeUploaderAccount(rawAccount);
+  if (!account) return null;
+  if (uploaderAccountAliases.has(account)) return uploaderAccountAliases.get(account);
+  if (uploaderBadgeAliases.has(account)) return uploaderBadgeAliases.get(account);
+  return null;
+}
+
+function resolveUploaderBadge(rawUploader, rawAccount = '') {
   const normalized = normalizeWorkerName(rawUploader);
-  if (!normalized) return null;
-  if (uploaderBadgeAliases.has(normalized)) return uploaderBadgeAliases.get(normalized);
+  if (normalized) {
+    if (uploaderBadgeAliases.has(normalized)) return uploaderBadgeAliases.get(normalized);
+  } else {
+    const fromAccount = resolveUploaderBadgeFromAccount(rawAccount);
+    if (fromAccount) return fromAccount;
+    return null;
+  }
 
   if (normalized.includes('hussein')) {
     if (/\bselman\b/.test(normalized)) return uploaderBadgeAliases.get('b');
@@ -1196,12 +1217,29 @@ function resolveUploaderBadge(rawUploader) {
   const firstName = normalized.split(' ')[0];
   if (uploaderBadgeAliases.has(firstName)) return uploaderBadgeAliases.get(firstName);
 
+  const fromAccount = resolveUploaderBadgeFromAccount(rawAccount);
+  if (fromAccount) return fromAccount;
+
   const label = String(rawUploader || '').trim().split(/\s+/)[0];
   if (!label) return null;
   return {
     cls: 'uploader-generic',
     label: label.length > 8 ? label.slice(0, 8) : label,
   };
+}
+
+function resolveCardUploaderBadge(uploader, account) {
+  const display = String(uploader || '').trim();
+  const accountId = String(account || '').trim();
+  if (display) {
+    const badge = resolveUploaderBadge(display, accountId);
+    if (badge) return { badge, tooltip: `Hochgeladen von ${display}` };
+  }
+  if (accountId) {
+    const badge = resolveUploaderBadgeFromAccount(accountId);
+    if (badge) return { badge, tooltip: `Hochgeladen von ${accountId}` };
+  }
+  return null;
 }
 
 function scheduleNextFetch() {
@@ -1242,12 +1280,14 @@ async function fetchData({ force = false } = {}) {
       const status = String(row.c?.[2]?.v ?? '').trim().toLowerCase();
       const gutachtenType = String(row.c?.[3]?.v ?? '').trim().toLowerCase();
       const uploader = String(row.c?.[4]?.v ?? '').trim();
+      const uploaderAccount = String(row.c?.[5]?.v ?? '').trim();
       return {
         Eingang: eingang,
         Bearbeiter: bearbeiter,
         Status: status,
         GutachtenType: gutachtenType,
         Uploader: uploader,
+        UploaderAccount: uploaderAccount,
       };
     }).filter((row) => {
       if (!row.Eingang) return false;
@@ -1356,6 +1396,7 @@ function buildBoardMap(data) {
       bearbeiter: row.Bearbeiter,
       gutachtenType: row.GutachtenType || '',
       uploader: row.Uploader || '',
+      uploaderAccount: row.UploaderAccount || '',
     };
 
     if (isGeprueftStatus(status)) {
@@ -1442,7 +1483,7 @@ function renderBoard(data) {
 
     map[col].forEach((item) => {
       const {
-        nummer, status, bearbeiter, gutachtenType, uploader,
+        nummer, status, bearbeiter, gutachtenType, uploader, uploaderAccount,
       } = item;
       if (nummer.toLowerCase() === col.toLowerCase()) return;
 
@@ -1511,16 +1552,16 @@ function renderBoard(data) {
 
       applyCardStatus(card, status);
 
-      const uploaderBadge = resolveUploaderBadge(uploader);
-      if (uploaderBadge) {
-        card.classList.add('extern', uploaderBadge.cls);
+      const uploaderInfo = resolveCardUploaderBadge(uploader, uploaderAccount);
+      if (uploaderInfo) {
+        card.classList.add('extern', uploaderInfo.badge.cls);
         const badge = document.createElement('div');
         badge.className = 'extern-badge';
-        badge.textContent = uploaderBadge.label;
-        badge.title = `Hochgeladen von ${uploader}`;
-        badge.setAttribute('aria-label', `Hochgeladen von ${uploader}`);
+        badge.textContent = uploaderInfo.badge.label;
+        badge.title = uploaderInfo.tooltip;
+        badge.setAttribute('aria-label', uploaderInfo.tooltip);
         card.appendChild(badge);
-        appendCardTooltip(card, `Hochgeladen von ${uploader}`);
+        appendCardTooltip(card, uploaderInfo.tooltip);
       }
 
       cardsWrap.appendChild(card);
