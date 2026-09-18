@@ -517,6 +517,16 @@ html[data-kiosk="1"] .badge-admin-toggle {
   cursor: grab;
 }
 
+.card-has-drive-link:not(.card-draggable) {
+  cursor: pointer;
+}
+
+.card-has-drive-link:not(.card-draggable):hover .card-number {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .card-dragging {
   opacity: 0.55;
   transform: scale(0.98);

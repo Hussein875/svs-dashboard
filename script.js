@@ -7,7 +7,8 @@ const SILENT_AKTE_DAYS = 7;
 const SESSION_PEAK_KEY = 'svs-dashboard-session-peak';
 const SOUND_PREF_KEY = 'svs-dashboard-sound-enabled';
 const SHEET_ID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
-const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A1:F`;
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A1:G`;
+const DRIVE_FOLDER_URL_PREFIX = 'https://drive.google.com/drive/folders/';
 const DASHBOARD_HEADER_LABELS = new Set([
   'aktennummer', 'bearbeiter', 'status',
   'gutachten-typ', 'gutachten_typ', 'kürzel', 'kurzel', 'hochgeladen_von',
@@ -712,6 +713,37 @@ function isManualAssignStatus(status) {
   return !isGeprueftStatus(s) && !isVollstaendigStatus(s);
 }
 
+function bindCardDriveLink(card, folderId) {
+  const id = String(folderId || '').trim();
+  if (!id) return;
+
+  const url = `${DRIVE_FOLDER_URL_PREFIX}${id}`;
+  let startX = 0;
+  let startY = 0;
+  let moved = false;
+
+  card.classList.add('card-has-drive-link');
+  appendCardTooltip(card, 'In Google Drive öffnen');
+
+  card.addEventListener('pointerdown', (event) => {
+    startX = event.clientX;
+    startY = event.clientY;
+    moved = false;
+  });
+
+  card.addEventListener('pointermove', (event) => {
+    if (Math.hypot(event.clientX - startX, event.clientY - startY) > 6) {
+      moved = true;
+    }
+  });
+
+  card.addEventListener('click', (event) => {
+    if (moved || card.classList.contains('card-dragging')) return;
+    event.preventDefault();
+    window.open(url, '_blank', 'noopener,noreferrer');
+  });
+}
+
 function bindCardDrag(card, akte, status) {
   if (!adminUnlocked || !isManualAssignStatus(status)) {
     card.draggable = false;
@@ -1360,6 +1392,7 @@ async function fetchData({ force = false } = {}) {
       const gutachtenType = String(row.c?.[3]?.v ?? '').trim().toLowerCase();
       const uploader = String(row.c?.[4]?.v ?? '').trim();
       const uploaderAccount = String(row.c?.[5]?.v ?? '').trim();
+      const driveFolderId = String(row.c?.[6]?.v ?? '').trim();
       return {
         Eingang: eingang,
         Bearbeiter: bearbeiter,
@@ -1367,6 +1400,7 @@ async function fetchData({ force = false } = {}) {
         GutachtenType: gutachtenType,
         Uploader: uploader,
         UploaderAccount: uploaderAccount,
+        DriveFolderId: driveFolderId,
       };
     }).filter((row) => {
       if (!row.Eingang) return false;
@@ -1476,6 +1510,7 @@ function buildBoardMap(data) {
       gutachtenType: row.GutachtenType || '',
       uploader: row.Uploader || '',
       uploaderAccount: row.UploaderAccount || '',
+      driveFolderId: row.DriveFolderId || '',
     };
 
     if (isGeprueftStatus(status)) {
@@ -1562,12 +1597,13 @@ function renderBoard(data) {
 
     map[col].forEach((item) => {
       const {
-        nummer, status, bearbeiter, gutachtenType, uploader, uploaderAccount,
+        nummer, status, bearbeiter, gutachtenType, uploader, uploaderAccount, driveFolderId,
       } = item;
       if (nummer.toLowerCase() === col.toLowerCase()) return;
 
       const card = document.createElement('div');
       card.className = 'card';
+      bindCardDriveLink(card, driveFolderId);
       bindCardDrag(card, nummer, status);
 
       applyCardHighlight(card, { nummer, col });
