@@ -43,7 +43,6 @@ html[data-theme="light"] body.dashboard {
   --status-voll-text: #c2410c;
   --unknown-bg: rgba(15, 23, 42, 0.03);
   --unknown-border: rgba(15, 23, 42, 0.22);
-  --extern-stripe: rgba(15, 23, 42, 0.04);
   --time-bg: rgba(15, 23, 42, 0.03);
   --scrollbar: rgba(15, 23, 42, 0.15);
   --toggle-bg: #ffffff;
@@ -623,17 +622,6 @@ html[data-kiosk="1"] .badge-admin-toggle {
   border-color: rgba(249, 115, 22, 0.45);
 }
 .status-vollstaendig .card-number { color: var(--status-voll-text); }
-
-/* Externe Bearbeiter */
-.card.extern {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    var(--extern-stripe),
-    var(--extern-stripe) 8px,
-    transparent 8px,
-    transparent 16px
-  );
-}
 
 .extern-badge {
   position: absolute;
