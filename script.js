@@ -1306,7 +1306,13 @@ function resolveCardUploaderBadge(uploader, account) {
   const accountId = String(account || '').trim();
   if (display) {
     const badge = resolveUploaderBadge(display, accountId);
-    if (badge) return { badge, tooltip: `Hochgeladen von ${display}` };
+    if (badge) {
+      const fromFolder = Boolean(badgeFromKuerzel(display));
+      const tooltip = fromFolder
+        ? `Ordner-Kürzel: ${badge.label}`
+        : `Hochgeladen von ${display}`;
+      return { badge, tooltip };
+    }
   }
   if (accountId) {
     const badge = resolveUploaderBadgeFromAccount(accountId);
