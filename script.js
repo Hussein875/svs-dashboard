@@ -7,7 +7,7 @@ const SILENT_AKTE_DAYS = 7;
 const SESSION_PEAK_KEY = 'svs-dashboard-session-peak';
 const SOUND_PREF_KEY = 'svs-dashboard-sound-enabled';
 const SHEET_ID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
-const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A1:G`;
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A1:F`;
 const DRIVE_FOLDER_URL_PREFIX = 'https://drive.google.com/drive/folders/';
 const DASHBOARD_HEADER_LABELS = new Set([
   'aktennummer', 'bearbeiter', 'status',
@@ -1286,9 +1286,11 @@ function normalizeUploaderAccount(rawValue) {
   return String(rawValue || '').trim().toLowerCase().split('@')[0];
 }
 
+const IGNORED_UPLOADER_ACCOUNTS = new Set(['info']);
+
 function resolveUploaderBadgeFromAccount(rawAccount) {
   const account = normalizeUploaderAccount(rawAccount);
-  if (!account) return null;
+  if (!account || IGNORED_UPLOADER_ACCOUNTS.has(account)) return null;
   if (uploaderAccountAliases.has(account)) return uploaderAccountAliases.get(account);
   const directKuerzel = badgeFromKuerzel(account);
   if (directKuerzel) return directKuerzel;
@@ -1391,15 +1393,13 @@ async function fetchData({ force = false } = {}) {
       const status = String(row.c?.[2]?.v ?? '').trim().toLowerCase();
       const gutachtenType = String(row.c?.[3]?.v ?? '').trim().toLowerCase();
       const uploader = String(row.c?.[4]?.v ?? '').trim();
-      const uploaderAccount = String(row.c?.[5]?.v ?? '').trim();
-      const driveFolderId = String(row.c?.[6]?.v ?? '').trim();
+      const driveFolderId = String(row.c?.[5]?.v ?? '').trim();
       return {
         Eingang: eingang,
         Bearbeiter: bearbeiter,
         Status: status,
         GutachtenType: gutachtenType,
         Uploader: uploader,
-        UploaderAccount: uploaderAccount,
         DriveFolderId: driveFolderId,
       };
     }).filter((row) => {
@@ -1509,7 +1509,6 @@ function buildBoardMap(data) {
       bearbeiter: row.Bearbeiter,
       gutachtenType: row.GutachtenType || '',
       uploader: row.Uploader || '',
-      uploaderAccount: row.UploaderAccount || '',
       driveFolderId: row.DriveFolderId || '',
     };
 
@@ -1597,7 +1596,7 @@ function renderBoard(data) {
 
     map[col].forEach((item) => {
       const {
-        nummer, status, bearbeiter, gutachtenType, uploader, uploaderAccount, driveFolderId,
+        nummer, status, bearbeiter, gutachtenType, uploader, driveFolderId,
       } = item;
       if (nummer.toLowerCase() === col.toLowerCase()) return;
 
@@ -1668,7 +1667,7 @@ function renderBoard(data) {
 
       applyCardStatus(card, status);
 
-      const uploaderInfo = resolveCardUploaderBadge(uploader, uploaderAccount);
+      const uploaderInfo = resolveCardUploaderBadge(uploader);
       if (uploaderInfo) {
         card.classList.add('extern', uploaderInfo.badge.cls);
         const badge = document.createElement('div');
