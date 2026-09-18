@@ -53,48 +53,90 @@ const workerColumnAliases = new Map([
   ['osama sleiman', 'Osama'],
   ['osama souleiman', 'Osama']
 ]);
+const BERLIN_BADGE = { cls: 'berlin', label: 'B' };
+
+const KUERZEL_BADGE_STYLES = {
+  RO: 'robar',
+  RA: 'ramazan',
+  OS: 'osama',
+  HJ: 'hj',
+  HU: 'hu',
+  MZ: 'mohamad',
+  HK: 'hassan',
+  HA: 'hassan',
+  ID: 'uploader-generic',
+  IZ: 'uploader-generic',
+};
+
+function badgeFromKuerzel(rawValue) {
+  const trimmed = String(rawValue || '').trim();
+  if (!trimmed) return null;
+
+  const upper = trimmed.toUpperCase();
+  if (upper === 'B' || upper === 'HB' || upper === 'BERLINER' || upper === 'BERLIN') {
+    return BERLIN_BADGE;
+  }
+  if (upper === 'DI') {
+    return { cls: 'uploader-generic', label: 'ID' };
+  }
+  if (/^[A-Z]{2,4}$/.test(upper)) {
+    return {
+      cls: KUERZEL_BADGE_STYLES[upper] || 'uploader-generic',
+      label: upper,
+    };
+  }
+  return null;
+}
+
 const uploaderBadgeAliases = new Map([
-  ['hadi', { cls: 'hadi', label: 'Hadi' }],
-  ['hadi issa', { cls: 'hadi', label: 'Hadi' }],
-  ['ramazan', { cls: 'ramazan', label: 'Ramazan' }],
-  ['ramazan dag', { cls: 'ramazan', label: 'Ramazan' }],
-  ['robar', { cls: 'robar', label: 'Robar' }],
-  ['robar kassem', { cls: 'robar', label: 'Robar' }],
-  ['robar kassam', { cls: 'robar', label: 'Robar' }],
-  ['osama', { cls: 'osama', label: 'Osama' }],
-  ['osama sleiman', { cls: 'osama', label: 'Osama' }],
-  ['osama souleiman', { cls: 'osama', label: 'Osama' }],
-  ['hassan', { cls: 'hassan', label: 'Hassan' }],
-  ['hassan khodr', { cls: 'hassan', label: 'Hassan' }],
-  ['hassan souleiman', { cls: 'hassan', label: 'Hassan' }],
+  ['ramazan', { cls: 'ramazan', label: 'RA' }],
+  ['ramazan dag', { cls: 'ramazan', label: 'RA' }],
+  ['robar', { cls: 'robar', label: 'RO' }],
+  ['robar kassem', { cls: 'robar', label: 'RO' }],
+  ['robar kassam', { cls: 'robar', label: 'RO' }],
+  ['osama', { cls: 'osama', label: 'OS' }],
+  ['osama sleiman', { cls: 'osama', label: 'OS' }],
+  ['osama souleiman', { cls: 'osama', label: 'OS' }],
+  ['hassan', { cls: 'hassan', label: 'HK' }],
+  ['hassan khodr', { cls: 'hassan', label: 'HK' }],
+  ['hassan souleiman', { cls: 'hassan', label: 'HA' }],
   ['h', { cls: 'hj', label: 'HJ' }],
   ['hj', { cls: 'hj', label: 'HJ' }],
   ['hussein jaber', { cls: 'hj', label: 'HJ' }],
-  ['b', { cls: 'hussein', label: 'B' }],
-  ['hussein selman', { cls: 'hussein', label: 'B' }],
+  ['b', BERLIN_BADGE],
+  ['hb', BERLIN_BADGE],
+  ['hussein selman', BERLIN_BADGE],
+  ['berliner', BERLIN_BADGE],
+  ['berlin', BERLIN_BADGE],
   ['hu', { cls: 'hu', label: 'HU' }],
   ['hussein souleiman', { cls: 'hu', label: 'HU' }],
   ['hussein suleiman', { cls: 'hu', label: 'HU' }],
-  ['m', { cls: 'mohamad', label: 'M' }],
-  ['mohamad', { cls: 'mohamad', label: 'M' }],
-  ['mohamed', { cls: 'mohamad', label: 'M' }],
-  ['mohammed', { cls: 'mohamad', label: 'M' }],
-  ['muhammad', { cls: 'mohamad', label: 'M' }],
-  ['mohamed zahreddine', { cls: 'mohamad', label: 'M' }],
-  ['mohamad zahreddine', { cls: 'mohamad', label: 'M' }],
-  ['mohammed zahreddine', { cls: 'mohamad', label: 'M' }],
-  ['mohamed zahhredine', { cls: 'mohamad', label: 'M' }],
-  ['mohamad zahhredine', { cls: 'mohamad', label: 'M' }],
-  ['mohammed zahhredine', { cls: 'mohamad', label: 'M' }],
-  ['mohamed zahredine', { cls: 'mohamad', label: 'M' }],
-  ['mohamad zahredine', { cls: 'mohamad', label: 'M' }],
-  ['mohammed zahredine', { cls: 'mohamad', label: 'M' }],
+  ['m', { cls: 'mohamad', label: 'MZ' }],
+  ['mz', { cls: 'mohamad', label: 'MZ' }],
+  ['mohamad', { cls: 'mohamad', label: 'MZ' }],
+  ['mohamed', { cls: 'mohamad', label: 'MZ' }],
+  ['mohammed', { cls: 'mohamad', label: 'MZ' }],
+  ['muhammad', { cls: 'mohamad', label: 'MZ' }],
+  ['mohamed zahreddine', { cls: 'mohamad', label: 'MZ' }],
+  ['mohamad zahreddine', { cls: 'mohamad', label: 'MZ' }],
+  ['mohammed zahreddine', { cls: 'mohamad', label: 'MZ' }],
+  ['mohamed zahhredine', { cls: 'mohamad', label: 'MZ' }],
+  ['mohamad zahhredine', { cls: 'mohamad', label: 'MZ' }],
+  ['mohammed zahhredine', { cls: 'mohamad', label: 'MZ' }],
+  ['mohamed zahredine', { cls: 'mohamad', label: 'MZ' }],
+  ['mohamad zahredine', { cls: 'mohamad', label: 'MZ' }],
+  ['mohammed zahredine', { cls: 'mohamad', label: 'MZ' }],
+  ['diyar', { cls: 'uploader-generic', label: 'ID' }],
+  ['id', { cls: 'uploader-generic', label: 'ID' }],
+  ['izzedin', { cls: 'uploader-generic', label: 'IZ' }],
+  ['iz', { cls: 'uploader-generic', label: 'IZ' }],
   ['svs app', { cls: 'svs', label: 'App' }],
   ['bot', { cls: 'bot', label: 'Bot' }],
 ]);
 
 const uploaderAccountAliases = new Map([
   ['hj251092', { cls: 'hj', label: 'HJ' }],
+  ['hassankhodr978', { cls: 'hassan', label: 'HK' }],
 ]);
 
 const BADGE_CONFIG_COLUMNS = ['Hadi', 'Ramazan', 'Robar', 'Osama'];
@@ -988,8 +1030,33 @@ function isUnknownStatus(status) {
   return normalized === 'unbekannt' || normalized === 'fehler beim auslesen';
 }
 
-function isWertgutachtenType(type) {
-  return String(type || '').trim().toLowerCase() === 'wert';
+const SPECIAL_GUTACHTEN_TYPES = {
+  wert: {
+    cardClass: 'card-wert',
+    badgeClass: 'gutachten-type-badge gutachten-badge-wert',
+    legendClass: 'gutachten-legend-badge gutachten-legend-wert',
+    icon: '€',
+    label: 'Wertgutachten',
+  },
+  kva: {
+    cardClass: 'card-kva',
+    badgeClass: 'gutachten-type-badge gutachten-badge-kva',
+    legendClass: 'gutachten-legend-badge gutachten-legend-kva',
+    icon: 'KV',
+    label: 'Kostenvoranschlag',
+  },
+  kasko: {
+    cardClass: 'card-kasko',
+    badgeClass: 'gutachten-type-badge gutachten-badge-kasko',
+    legendClass: 'gutachten-legend-badge gutachten-legend-kasko',
+    icon: '⛑',
+    label: 'Kaskogutachten',
+  },
+};
+
+function getSpecialGutachtenConfig(type) {
+  const key = String(type || '').trim().toLowerCase();
+  return SPECIAL_GUTACHTEN_TYPES[key] || null;
 }
 
 function makeEmptyMap() {
@@ -1188,18 +1255,21 @@ function resolveUploaderBadgeFromAccount(rawAccount) {
   const account = normalizeUploaderAccount(rawAccount);
   if (!account) return null;
   if (uploaderAccountAliases.has(account)) return uploaderAccountAliases.get(account);
+  const directKuerzel = badgeFromKuerzel(account);
+  if (directKuerzel) return directKuerzel;
   if (uploaderBadgeAliases.has(account)) return uploaderBadgeAliases.get(account);
   return null;
 }
 
 function resolveUploaderBadge(rawUploader, rawAccount = '') {
+  const directKuerzel = badgeFromKuerzel(rawUploader);
+  if (directKuerzel) return directKuerzel;
+
   const normalized = normalizeWorkerName(rawUploader);
   if (normalized) {
     if (uploaderBadgeAliases.has(normalized)) return uploaderBadgeAliases.get(normalized);
   } else {
-    const fromAccount = resolveUploaderBadgeFromAccount(rawAccount);
-    if (fromAccount) return fromAccount;
-    return null;
+    return resolveUploaderBadgeFromAccount(rawAccount);
   }
 
   if (normalized.includes('hussein')) {
@@ -1214,18 +1284,18 @@ function resolveUploaderBadge(rawUploader, rawAccount = '') {
     return uploaderBadgeAliases.get('m');
   }
 
+  if (/\bkhodr\b/.test(normalized)) return uploaderBadgeAliases.get('hassan khodr');
+  if (/\bsouleiman\b/.test(normalized) && /\bhassan\b/.test(normalized)) {
+    return uploaderBadgeAliases.get('hassan souleiman');
+  }
+
   const firstName = normalized.split(' ')[0];
   if (uploaderBadgeAliases.has(firstName)) return uploaderBadgeAliases.get(firstName);
 
   const fromAccount = resolveUploaderBadgeFromAccount(rawAccount);
   if (fromAccount) return fromAccount;
 
-  const label = String(rawUploader || '').trim().split(/\s+/)[0];
-  if (!label) return null;
-  return {
-    cls: 'uploader-generic',
-    label: label.length > 8 ? label.slice(0, 8) : label,
-  };
+  return badgeFromKuerzel(firstName);
 }
 
 function resolveCardUploaderBadge(uploader, account) {
@@ -1530,15 +1600,16 @@ function renderBoard(data) {
         appendCardTooltip(card, `Bearbeiter: ${bearbeiter}`);
       }
 
-      if (isWertgutachtenType(gutachtenType)) {
-        card.classList.add('card-wert');
-        appendCardTooltip(card, 'Wertgutachten');
-        const wertBadge = document.createElement('div');
-        wertBadge.className = 'wert-badge';
-        wertBadge.textContent = '€';
-        wertBadge.title = 'Wertgutachten';
-        wertBadge.setAttribute('aria-label', 'Wertgutachten');
-        card.appendChild(wertBadge);
+      const specialGutachten = getSpecialGutachtenConfig(gutachtenType);
+      if (specialGutachten) {
+        card.classList.add(specialGutachten.cardClass);
+        appendCardTooltip(card, specialGutachten.label);
+        const typeBadge = document.createElement('div');
+        typeBadge.className = specialGutachten.badgeClass;
+        typeBadge.textContent = specialGutachten.icon;
+        typeBadge.title = specialGutachten.label;
+        typeBadge.setAttribute('aria-label', specialGutachten.label);
+        card.appendChild(typeBadge);
       }
 
       if (isUnknownStatus(status)) {
