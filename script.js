@@ -1045,7 +1045,7 @@ const SPECIAL_GUTACHTEN_TYPES = {
     cardClass: 'card-kva',
     badgeClass: 'gutachten-type-badge gutachten-badge-kva',
     legendClass: 'gutachten-legend-badge gutachten-legend-kva',
-    icon: 'KV',
+    icon: '📋',
     label: 'Kostenvoranschlag',
   },
   kasko: {
