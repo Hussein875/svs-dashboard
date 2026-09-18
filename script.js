@@ -7,10 +7,11 @@ const SILENT_AKTE_DAYS = 7;
 const SESSION_PEAK_KEY = 'svs-dashboard-session-peak';
 const SOUND_PREF_KEY = 'svs-dashboard-sound-enabled';
 const SHEET_ID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
-const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A1:E`;
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A1:F`;
 const DASHBOARD_HEADER_LABELS = new Set([
   'aktennummer', 'bearbeiter', 'status',
-  'gutachten-typ', 'gutachten_typ', 'kürzel', 'kurzel', 'eingang', 'nummer',
+  'gutachten-typ', 'gutachten_typ', 'kürzel', 'kurzel', 'hochgeladen_von',
+  'eingang', 'nummer',
 ]);
 const IMPORT_LOG_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=A2:C`;
 const IMPORT_RUN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=G1`;
@@ -52,7 +53,20 @@ const workerColumnAliases = new Map([
   ['osama sleiman', 'Osama'],
   ['osama souleiman', 'Osama']
 ]);
-const externalWorkerAliases = new Map([
+const uploaderBadgeAliases = new Map([
+  ['hadi', { cls: 'hadi', label: 'Hadi' }],
+  ['hadi issa', { cls: 'hadi', label: 'Hadi' }],
+  ['ramazan', { cls: 'ramazan', label: 'Ramazan' }],
+  ['ramazan dag', { cls: 'ramazan', label: 'Ramazan' }],
+  ['robar', { cls: 'robar', label: 'Robar' }],
+  ['robar kassem', { cls: 'robar', label: 'Robar' }],
+  ['robar kassam', { cls: 'robar', label: 'Robar' }],
+  ['osama', { cls: 'osama', label: 'Osama' }],
+  ['osama sleiman', { cls: 'osama', label: 'Osama' }],
+  ['osama souleiman', { cls: 'osama', label: 'Osama' }],
+  ['hassan', { cls: 'hassan', label: 'Hassan' }],
+  ['hassan khodr', { cls: 'hassan', label: 'Hassan' }],
+  ['hassan souleiman', { cls: 'hassan', label: 'Hassan' }],
   ['h', { cls: 'hj', label: 'HJ' }],
   ['hj', { cls: 'hj', label: 'HJ' }],
   ['hussein jaber', { cls: 'hj', label: 'HJ' }],
@@ -60,6 +74,7 @@ const externalWorkerAliases = new Map([
   ['hussein selman', { cls: 'hussein', label: 'B' }],
   ['hu', { cls: 'hu', label: 'HU' }],
   ['hussein souleiman', { cls: 'hu', label: 'HU' }],
+  ['hussein suleiman', { cls: 'hu', label: 'HU' }],
   ['m', { cls: 'mohamad', label: 'M' }],
   ['mohamad', { cls: 'mohamad', label: 'M' }],
   ['mohamed', { cls: 'mohamad', label: 'M' }],
@@ -73,7 +88,9 @@ const externalWorkerAliases = new Map([
   ['mohammed zahhredine', { cls: 'mohamad', label: 'M' }],
   ['mohamed zahredine', { cls: 'mohamad', label: 'M' }],
   ['mohamad zahredine', { cls: 'mohamad', label: 'M' }],
-  ['mohammed zahredine', { cls: 'mohamad', label: 'M' }]
+  ['mohammed zahredine', { cls: 'mohamad', label: 'M' }],
+  ['svs app', { cls: 'svs', label: 'App' }],
+  ['bot', { cls: 'bot', label: 'Bot' }],
 ]);
 
 const BADGE_CONFIG_COLUMNS = ['Hadi', 'Ramazan', 'Robar', 'Osama'];
@@ -1159,28 +1176,32 @@ function resolveWorkerColumn(rawWorker) {
   return null;
 }
 
-function resolveExternalBadge(rawWorker) {
-  const normalized = normalizeWorkerName(rawWorker);
+function resolveUploaderBadge(rawUploader) {
+  const normalized = normalizeWorkerName(rawUploader);
   if (!normalized) return null;
-  if (externalWorkerAliases.has(normalized)) return externalWorkerAliases.get(normalized);
+  if (uploaderBadgeAliases.has(normalized)) return uploaderBadgeAliases.get(normalized);
 
-  // Robust Hussein mapping by surname to avoid exact-string dependency
   if (normalized.includes('hussein')) {
-    if (/\bselman\b/.test(normalized)) return externalWorkerAliases.get('b');
-    if (/\b(souleiman|suleiman|sleiman)\b/.test(normalized)) return externalWorkerAliases.get('hu');
-    if (/\bjaber\b/.test(normalized)) return externalWorkerAliases.get('h');
+    if (/\bselman\b/.test(normalized)) return uploaderBadgeAliases.get('b');
+    if (/\b(souleiman|suleiman|sleiman)\b/.test(normalized)) return uploaderBadgeAliases.get('hu');
+    if (/\bjaber\b/.test(normalized)) return uploaderBadgeAliases.get('h');
   }
 
-  // Mohamed Zahreddine (+ common spelling variants)
   if (/\b(zahreddine|zahhredine|zahredine|zaheredine)\b/.test(normalized)
       || (/\b(mohamed|mohamad|mohammed|muhammad)\b/.test(normalized)
         && /\b(zahh|zahr)/.test(normalized))) {
-    return externalWorkerAliases.get('m');
+    return uploaderBadgeAliases.get('m');
   }
 
   const firstName = normalized.split(' ')[0];
-  if (externalWorkerAliases.has(firstName)) return externalWorkerAliases.get(firstName);
-  return null;
+  if (uploaderBadgeAliases.has(firstName)) return uploaderBadgeAliases.get(firstName);
+
+  const label = String(rawUploader || '').trim().split(/\s+/)[0];
+  if (!label) return null;
+  return {
+    cls: 'uploader-generic',
+    label: label.length > 8 ? label.slice(0, 8) : label,
+  };
 }
 
 function scheduleNextFetch() {
@@ -1221,12 +1242,14 @@ async function fetchData({ force = false } = {}) {
       const status = String(row.c?.[2]?.v ?? '').trim().toLowerCase();
       const gutachtenType = String(row.c?.[3]?.v ?? '').trim().toLowerCase();
       const uploadShortcode = String(row.c?.[4]?.v ?? '').trim().toUpperCase();
+      const uploader = String(row.c?.[5]?.v ?? '').trim();
       return {
         Eingang: eingang,
         Bearbeiter: bearbeiter,
         Status: status,
         UploadShortcode: uploadShortcode,
         GutachtenType: gutachtenType,
+        Uploader: uploader,
       };
     }).filter((row) => {
       if (!row.Eingang) return false;
@@ -1335,6 +1358,7 @@ function buildBoardMap(data) {
       bearbeiter: row.Bearbeiter,
       uploadShortcode: row.UploadShortcode || '',
       gutachtenType: row.GutachtenType || '',
+      uploader: row.Uploader || '',
     };
 
     if (isGeprueftStatus(status)) {
@@ -1421,7 +1445,7 @@ function renderBoard(data) {
 
     map[col].forEach((item) => {
       const {
-        nummer, status, bearbeiter, uploadShortcode, gutachtenType,
+        nummer, status, bearbeiter, uploadShortcode, gutachtenType, uploader,
       } = item;
       if (nummer.toLowerCase() === col.toLowerCase()) return;
 
@@ -1494,13 +1518,16 @@ function renderBoard(data) {
 
       applyCardStatus(card, status);
 
-      const externalBadge = resolveExternalBadge(bearbeiter);
-      if (externalBadge) {
-        card.classList.add('extern', externalBadge.cls);
+      const uploaderBadge = resolveUploaderBadge(uploader);
+      if (uploaderBadge) {
+        card.classList.add('extern', uploaderBadge.cls);
         const badge = document.createElement('div');
         badge.className = 'extern-badge';
-        badge.textContent = externalBadge.label;
+        badge.textContent = uploaderBadge.label;
+        badge.title = `Hochgeladen von ${uploader}`;
+        badge.setAttribute('aria-label', `Hochgeladen von ${uploader}`);
         card.appendChild(badge);
+        appendCardTooltip(card, `Hochgeladen von ${uploader}`);
       }
 
       cardsWrap.appendChild(card);

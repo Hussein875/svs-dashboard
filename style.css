@@ -647,15 +647,31 @@ html[data-kiosk="1"] .badge-admin-toggle {
   font-weight: 800;
 }
 
+.card.extern.hadi .extern-badge    { background: #0284c7; }
+.card.extern.ramazan .extern-badge { background: #ea580c; }
+.card.extern.robar .extern-badge   { background: #7c3aed; }
+.card.extern.osama .extern-badge   { background: #16a34a; }
+.card.extern.hassan .extern-badge  { background: #ca8a04; }
 .card.extern.hj .extern-badge      { background: #7c3aed; }
 .card.extern.hussein .extern-badge { background: #2563eb; }
 .card.extern.hu .extern-badge      { background: #1e293b; }
 .card.extern.mohamad .extern-badge { background: #0d9488; }
+.card.extern.svs .extern-badge     { background: #64748b; }
+.card.extern.bot .extern-badge     { background: #475569; }
+.card.extern.uploader-generic .extern-badge { background: #64748b; }
 
+.card.extern.hadi    { border-left: 3px solid #0284c7; }
+.card.extern.ramazan { border-left: 3px solid #ea580c; }
+.card.extern.robar   { border-left: 3px solid #7c3aed; }
+.card.extern.osama   { border-left: 3px solid #16a34a; }
+.card.extern.hassan  { border-left: 3px solid #ca8a04; }
 .card.extern.hj      { border-left: 3px solid #7c3aed; }
 .card.extern.hussein { border-left: 3px solid #2563eb; }
 .card.extern.hu      { border-left: 3px solid #94a3b8; }
 .card.extern.mohamad { border-left: 3px solid #0d9488; }
+.card.extern.svs,
+.card.extern.bot,
+.card.extern.uploader-generic { border-left: 3px solid #94a3b8; }
 
 /* Wertgutachten */
 .card.card-wert {
