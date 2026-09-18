@@ -137,6 +137,9 @@ const uploaderBadgeAliases = new Map([
 const uploaderAccountAliases = new Map([
   ['hj251092', { cls: 'hj', label: 'HJ' }],
   ['hassankhodr978', { cls: 'hassan', label: 'HK' }],
+  ['ramadandag47', { cls: 'ramazan', label: 'RA' }],
+  ['hussein_s', { cls: 'hu', label: 'HU' }],
+  ['gutachter.mohamed', { cls: 'mohamad', label: 'MZ' }],
 ]);
 
 const BADGE_CONFIG_COLUMNS = ['Hadi', 'Ramazan', 'Robar', 'Osama'];
