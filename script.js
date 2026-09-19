@@ -1198,15 +1198,22 @@ function prefersReducedMotion() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+function pulseChangingClass(el) {
+  if (!el || prefersReducedMotion()) return;
+
+  el.classList.remove('is-changing');
+  void el.offsetWidth;
+  el.classList.add('is-changing');
+  el.addEventListener('animationend', () => {
+    el.classList.remove('is-changing');
+  }, { once: true });
+}
+
 function animateNextAkteNumber(numEl) {
   if (!numEl || prefersReducedMotion()) return;
 
-  numEl.classList.remove('is-changing');
-  void numEl.offsetWidth;
-  numEl.classList.add('is-changing');
-  numEl.addEventListener('animationend', () => {
-    numEl.classList.remove('is-changing');
-  }, { once: true });
+  pulseChangingClass(numEl);
+  pulseChangingClass(document.getElementById('nextAkteCar'));
 }
 
 function setTickerText(nextNumber) {

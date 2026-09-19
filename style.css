@@ -324,14 +324,35 @@ html[data-kiosk="1"] .badge-admin-toggle {
 .next-akte-banner {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   max-width: 100%;
-  padding: 7px 16px 7px 14px;
+  padding: 7px 16px 7px 12px;
   background: var(--bg-panel);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow);
   white-space: nowrap;
+}
+
+.next-akte-car {
+  flex-shrink: 0;
+  width: 44px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(37, 99, 235, 0.18));
+  transform-origin: center bottom;
+}
+
+.next-akte-car.is-changing {
+  animation: next-akte-car-hop 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes next-akte-car-hop {
+  0% { transform: translateX(0) translateY(0); }
+  28% { transform: translateX(3px) translateY(-2px); }
+  55% { transform: translateX(0) translateY(0); }
+  72% { transform: translateX(1px) translateY(-1px); }
+  100% { transform: translateX(0) translateY(0); }
 }
 
 .next-akte-label {
@@ -399,7 +420,8 @@ html[data-theme="dark"] .next-akte-number {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .next-akte-number.is-changing {
+  .next-akte-number.is-changing,
+  .next-akte-car.is-changing {
     animation: none;
   }
 }
@@ -1132,6 +1154,7 @@ html[data-theme="dark"] .akte-delivery-plate {
     padding: 6px 12px 6px 10px;
   }
 
+  .next-akte-car { width: 36px; }
   .next-akte-label { font-size: 9px; }
   .next-akte-divider { height: 24px; }
   .next-akte-number { font-size: 22px; padding: 4px 10px; }
@@ -1380,6 +1403,10 @@ html[data-kiosk="1"] .card-number {
 
 html[data-kiosk="1"] .card:hover {
   transform: none;
+}
+
+html[data-kiosk="1"] .next-akte-car {
+  width: 50px;
 }
 
 html[data-kiosk="1"] .next-akte-label {
