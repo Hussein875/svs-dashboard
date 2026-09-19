@@ -1191,23 +1191,64 @@ function handleAktenPeakChange(currentPeak) {
   writeSessionPeakAkte(currentPeak);
 }
 
-function setTickerText(nextNumber) {
-  const ticker = document.querySelector('.ticker');
-  if (!ticker) return;
+let lastDeliveredNextNumber = null;
 
-  ticker.textContent = '';
-  const span = document.createElement('span');
-  span.className = 'ticker-span';
-  span.textContent = `💥 Aktuelle Nummer: ${nextNumber} 🚗`;
-  ticker.appendChild(span);
-  startTickerAnimation();
+function prefersReducedMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-function startTickerAnimation() {
-  const spans = document.querySelectorAll('.ticker .ticker-span');
-  spans.forEach((span) => {
-    span.style.animation = 'ticker-scroll 25s linear infinite';
-  });
+function parkAkteDeliveryCar(car) {
+  car.classList.remove('is-driving-in', 'is-driving-out');
+  car.classList.add('is-parked');
+}
+
+function driveInAkteDeliveryCar(car, display) {
+  const numEl = document.getElementById('naechsteNummer');
+  if (numEl) numEl.textContent = display;
+
+  car.hidden = false;
+  car.classList.remove('is-parked', 'is-driving-out');
+
+  if (prefersReducedMotion()) {
+    parkAkteDeliveryCar(car);
+    lastDeliveredNextNumber = display;
+    return;
+  }
+
+  car.classList.add('is-driving-in');
+  car.addEventListener('animationend', (event) => {
+    if (event.animationName !== 'car-drive-in') return;
+    parkAkteDeliveryCar(car);
+    lastDeliveredNextNumber = display;
+  }, { once: true });
+}
+
+function setTickerText(nextNumber) {
+  const car = document.getElementById('akteDeliveryCar');
+  if (!car) return;
+
+  const display = nextNumber == null || nextNumber === '' ? '–' : String(nextNumber);
+  if (display === lastDeliveredNextNumber && car.classList.contains('is-parked')) return;
+
+  const startDriveIn = () => driveInAkteDeliveryCar(car, display);
+
+  if (
+    !prefersReducedMotion()
+    && car.classList.contains('is-parked')
+    && lastDeliveredNextNumber !== null
+    && lastDeliveredNextNumber !== display
+  ) {
+    car.classList.remove('is-parked');
+    car.classList.add('is-driving-out');
+    car.addEventListener('animationend', (event) => {
+      if (event.animationName !== 'car-drive-out') return;
+      car.classList.remove('is-driving-out');
+      startDriveIn();
+    }, { once: true });
+    return;
+  }
+
+  startDriveIn();
 }
 
 function ensureOpenCountWidget() {
@@ -1831,7 +1872,6 @@ window.addEventListener('DOMContentLoaded', () => {
   fetchAbsenceBadges({ force: true }).then((changed) => {
     if (changed && lastBoardData.length) renderBoard(lastBoardData);
   });
-  startTickerAnimation();
   scheduleNextFetch();
   fetchData();
   setInterval(fetchData, FETCH_INTERVAL_MS);
