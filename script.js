@@ -67,6 +67,7 @@ const KUERZEL_BADGE_STYLES = {
   HA: 'hassan',
   ID: 'uploader-generic',
   IZ: 'uploader-generic',
+  TT: 'tolga',
 };
 
 function badgeFromKuerzel(rawValue) {
@@ -131,6 +132,8 @@ const uploaderBadgeAliases = new Map([
   ['id', { cls: 'uploader-generic', label: 'ID' }],
   ['izzedin', { cls: 'uploader-generic', label: 'IZ' }],
   ['iz', { cls: 'uploader-generic', label: 'IZ' }],
+  ['tolga', { cls: 'tolga', label: 'TT' }],
+  ['tt', { cls: 'tolga', label: 'TT' }],
   ['svs app', { cls: 'svs', label: 'App' }],
   ['bot', { cls: 'bot', label: 'Bot' }],
 ]);
