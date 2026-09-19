@@ -144,6 +144,7 @@ const uploaderAccountAliases = new Map([
   ['ramadandag47', { cls: 'ramazan', label: 'RA' }],
   ['hussein_s', { cls: 'hu', label: 'HU' }],
   ['gutachter.mohamed', { cls: 'mohamad', label: 'MZ' }],
+  ['tolgatanimaz', { cls: 'tolga', label: 'TT' }],
 ]);
 
 const BADGE_CONFIG_COLUMNS = ['Hadi', 'Ramazan', 'Robar', 'Osama'];
