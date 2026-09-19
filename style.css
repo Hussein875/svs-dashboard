@@ -315,7 +315,7 @@ html[data-kiosk="1"] .badge-admin-toggle {
 .header-main {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .akte-delivery {
@@ -324,16 +324,17 @@ html[data-kiosk="1"] .badge-admin-toggle {
   align-items: center;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .akte-delivery-stage {
   position: relative;
   width: min(100%, 220px);
-  height: 58px;
+  height: 100%;
   display: flex;
   justify-content: center;
-  align-items: flex-end;
+  align-items: center;
+  padding-top: 2px;
 }
 
 .akte-delivery-car {
