@@ -1191,19 +1191,46 @@ function handleAktenPeakChange(currentPeak) {
   writeSessionPeakAkte(currentPeak);
 }
 
+let lastDisplayedNextNumber = null;
 let lastDeliveredNextNumber = null;
 
 function prefersReducedMotion() {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+function animateNextAkteNumber(numEl) {
+  if (!numEl || prefersReducedMotion()) return;
+
+  numEl.classList.remove('is-changing');
+  void numEl.offsetWidth;
+  numEl.classList.add('is-changing');
+  numEl.addEventListener('animationend', () => {
+    numEl.classList.remove('is-changing');
+  }, { once: true });
+}
+
+function setTickerText(nextNumber) {
+  const numEl = document.getElementById('naechsteNummer');
+  if (!numEl) return;
+
+  const display = nextNumber == null || nextNumber === '' ? '–' : String(nextNumber);
+  if (display === lastDisplayedNextNumber) return;
+
+  const numberChanged = lastDisplayedNextNumber !== null && lastDisplayedNextNumber !== display;
+  numEl.textContent = display;
+
+  if (numberChanged) animateNextAkteNumber(numEl);
+  lastDisplayedNextNumber = display;
+}
+
+/* Archiv: Auto-Lieferung (für spätere Nutzung) */
 function parkAkteDeliveryCar(car) {
   car.classList.remove('is-driving-in', 'is-driving-out');
   car.classList.add('is-parked');
 }
 
 function driveInAkteDeliveryCar(car, display) {
-  const numEl = document.getElementById('naechsteNummer');
+  const numEl = document.getElementById('naechsteNummerCar');
   if (numEl) numEl.textContent = display;
 
   car.hidden = false;
@@ -1223,7 +1250,7 @@ function driveInAkteDeliveryCar(car, display) {
   }, { once: true });
 }
 
-function setTickerText(nextNumber) {
+function setAkteDeliveryCarText(nextNumber) {
   const car = document.getElementById('akteDeliveryCar');
   if (!car) return;
 

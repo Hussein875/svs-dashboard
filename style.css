@@ -315,7 +315,62 @@ html[data-kiosk="1"] .badge-admin-toggle {
 .header-main {
   flex: 1;
   min-width: 0;
-  overflow: visible;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.next-akte-line {
+  margin: 0;
+  text-align: center;
+  font-size: 22px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.next-akte-label,
+.next-akte-sep {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.next-akte-number {
+  color: var(--accent);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  display: inline-block;
+  transform-origin: center center;
+}
+
+.next-akte-number.is-changing {
+  animation: next-akte-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes next-akte-pop {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  40% {
+    transform: scale(1.14);
+    filter: brightness(1.12);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .next-akte-number.is-changing {
+    animation: none;
+  }
+}
+
+/* Archiv: Auto-Lieferung */
+.akte-delivery--archived {
+  display: none !important;
 }
 
 .akte-delivery {
@@ -1036,6 +1091,8 @@ html[data-theme="dark"] .akte-delivery-plate {
 
   .logo { height: 38px; }
 
+  .next-akte-line { font-size: 16px; }
+
   .akte-delivery-number { font-size: 18px; }
   .akte-delivery-svg { width: 104px; }
   .akte-delivery-stage { width: min(100%, 180px); }
@@ -1280,6 +1337,10 @@ html[data-kiosk="1"] .card-number {
 
 html[data-kiosk="1"] .card:hover {
   transform: none;
+}
+
+html[data-kiosk="1"] .next-akte-line {
+  font-size: 26px;
 }
 
 html[data-kiosk="1"] .akte-delivery-number {

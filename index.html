@@ -31,7 +31,7 @@
       } catch (_) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=59">
+  <link rel="stylesheet" href="style.css?v=60">
 </head>
 <body class="dashboard">
 
@@ -41,12 +41,19 @@
     </div>
 
     <div class="header-main">
-      <div class="akte-delivery" aria-live="polite" aria-label="Nächste Aktennummer">
+      <p class="next-akte-line" aria-live="polite" aria-label="Nächste Aktennummer">
+        <span class="next-akte-label">Nächste Aktennummer</span>
+        <span class="next-akte-sep" aria-hidden="true"> · </span>
+        <span class="next-akte-number" id="naechsteNummer">–</span>
+      </p>
+
+      <!-- Archiv: Auto-Lieferung (für spätere Nutzung) -->
+      <div class="akte-delivery akte-delivery--archived" hidden aria-hidden="true">
         <div class="akte-delivery-stage" id="akteDeliveryStage">
           <div class="akte-delivery-car" id="akteDeliveryCar" hidden>
             <div class="akte-delivery-plate">
               <span class="akte-delivery-label">Nächste Nr.</span>
-              <span class="akte-delivery-number" id="naechsteNummer">–</span>
+              <span class="akte-delivery-number" id="naechsteNummerCar">–</span>
             </div>
             <svg class="akte-delivery-svg" viewBox="0 0 128 52" aria-hidden="true" focusable="false">
               <ellipse cx="34" cy="44" rx="10" ry="10" fill="#0f172a"/>
@@ -194,6 +201,6 @@
     </div>
   </div>
 
-<script src="script.js?v=100"></script>
+<script src="script.js?v=101"></script>
 </body>
 </html>
