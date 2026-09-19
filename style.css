@@ -348,40 +348,40 @@ html[data-kiosk="1"] .badge-admin-toggle {
 .akte-delivery-plate {
   position: relative;
   z-index: 2;
-  margin-bottom: -4px;
+  margin-bottom: -2px;
   background: #ffffff;
   border: 2px solid #1e293b;
-  border-radius: 8px;
-  padding: 2px 14px 4px;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
+  border-radius: 7px;
+  padding: 1px 10px 2px;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.12);
   text-align: center;
-  min-width: 76px;
+  min-width: 64px;
 }
 
 .akte-delivery-label {
   display: block;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #64748b;
-  line-height: 1.2;
+  line-height: 1.1;
 }
 
 .akte-delivery-number {
   display: block;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: #0f172a;
-  line-height: 1.05;
+  line-height: 1;
 }
 
 .akte-delivery-svg {
-  width: 128px;
+  width: 108px;
   height: auto;
   display: block;
-  filter: drop-shadow(0 3px 6px rgba(15, 23, 42, 0.12));
+  filter: drop-shadow(0 2px 5px rgba(15, 23, 42, 0.1));
 }
 
 html[data-theme="dark"] .akte-delivery-plate {
