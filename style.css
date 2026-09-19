@@ -321,44 +321,80 @@ html[data-kiosk="1"] .badge-admin-toggle {
   align-items: center;
 }
 
-.next-akte-line {
-  margin: 0;
-  text-align: center;
-  font-size: 22px;
-  line-height: 1.2;
+.next-akte-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 100%;
+  padding: 7px 16px 7px 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
   white-space: nowrap;
 }
 
-.next-akte-label,
-.next-akte-sep {
+.next-akte-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   color: var(--text-muted);
-  font-weight: 500;
+  line-height: 1.2;
+}
+
+.next-akte-divider {
+  flex-shrink: 0;
+  width: 1px;
+  height: 30px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    var(--border-strong) 18%,
+    var(--border-strong) 82%,
+    transparent
+  );
 }
 
 .next-akte-number {
+  min-width: 3.2ch;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
   color: var(--accent);
+  font-size: 28px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: center;
   display: inline-block;
   transform-origin: center center;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 10%, transparent) inset;
+}
+
+html[data-theme="dark"] .next-akte-number {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+  color: #93c5fd;
 }
 
 .next-akte-number.is-changing {
-  animation: next-akte-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: next-akte-pop 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes next-akte-pop {
   0% {
     transform: scale(1);
-    filter: brightness(1);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
   }
-  40% {
-    transform: scale(1.14);
-    filter: brightness(1.12);
+  42% {
+    transform: scale(1.07);
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 16%, transparent);
   }
   100% {
     transform: scale(1);
-    filter: brightness(1);
+    box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 10%, transparent) inset;
   }
 }
 
@@ -1091,7 +1127,14 @@ html[data-theme="dark"] .akte-delivery-plate {
 
   .logo { height: 38px; }
 
-  .next-akte-line { font-size: 16px; }
+  .next-akte-banner {
+    gap: 10px;
+    padding: 6px 12px 6px 10px;
+  }
+
+  .next-akte-label { font-size: 9px; }
+  .next-akte-divider { height: 24px; }
+  .next-akte-number { font-size: 22px; padding: 4px 10px; }
 
   .akte-delivery-number { font-size: 18px; }
   .akte-delivery-svg { width: 104px; }
@@ -1339,8 +1382,13 @@ html[data-kiosk="1"] .card:hover {
   transform: none;
 }
 
-html[data-kiosk="1"] .next-akte-line {
-  font-size: 26px;
+html[data-kiosk="1"] .next-akte-label {
+  font-size: 12px;
+}
+
+html[data-kiosk="1"] .next-akte-number {
+  font-size: 32px;
+  padding: 6px 14px;
 }
 
 html[data-kiosk="1"] .akte-delivery-number {

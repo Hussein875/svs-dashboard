@@ -31,7 +31,7 @@
       } catch (_) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=60">
+  <link rel="stylesheet" href="style.css?v=61">
 </head>
 <body class="dashboard">
 
@@ -41,11 +41,11 @@
     </div>
 
     <div class="header-main">
-      <p class="next-akte-line" aria-live="polite" aria-label="Nächste Aktennummer">
+      <div class="next-akte-banner" aria-live="polite" aria-label="Nächste Aktennummer">
         <span class="next-akte-label">Nächste Aktennummer</span>
-        <span class="next-akte-sep" aria-hidden="true"> · </span>
+        <span class="next-akte-divider" aria-hidden="true"></span>
         <span class="next-akte-number" id="naechsteNummer">–</span>
-      </p>
+      </div>
 
       <!-- Archiv: Auto-Lieferung (für spätere Nutzung) -->
       <div class="akte-delivery akte-delivery--archived" hidden aria-hidden="true">
@@ -201,6 +201,6 @@
     </div>
   </div>
 
-<script src="script.js?v=101"></script>
+<script src="script.js?v=102"></script>
 </body>
 </html>
