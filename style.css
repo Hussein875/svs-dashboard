@@ -1125,13 +1125,13 @@ html[data-theme="dark"] .akte-delivery-plate {
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 900px) {
   :root {
-    --header-h: 56px;
+    --header-h: 64px;
     --footer-h: 118px;
   }
 
   .app-header {
     flex-wrap: nowrap;
-    height: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+    height: auto;
     min-height: calc(var(--header-h) + env(safe-area-inset-top, 0px));
     padding: 0 14px;
     padding-top: env(safe-area-inset-top, 0px);
@@ -1144,6 +1144,8 @@ html[data-theme="dark"] .akte-delivery-plate {
     flex: 1;
     order: unset;
     min-width: 0;
+    overflow: visible;
+    justify-content: center;
   }
 
   .brand { order: unset; flex-shrink: 0; }
@@ -1152,14 +1154,16 @@ html[data-theme="dark"] .akte-delivery-plate {
   .logo { height: 38px; }
 
   .next-akte-banner {
-    gap: 10px;
-    padding: 6px 12px 6px 10px;
+    gap: 8px;
+    max-width: 100%;
+    min-width: 0;
+    padding: 5px 10px 5px 8px;
   }
 
-  .next-akte-car { width: 36px; }
-  .next-akte-label { font-size: 9px; }
-  .next-akte-divider { height: 24px; }
-  .next-akte-number { font-size: 22px; padding: 4px 10px; }
+  .next-akte-car { width: 32px; }
+  .next-akte-label { font-size: 8px; letter-spacing: 0.05em; }
+  .next-akte-divider { height: 22px; }
+  .next-akte-number { font-size: 20px; padding: 3px 9px; min-width: 2.8ch; }
 
   .akte-delivery-number { font-size: 18px; }
   .akte-delivery-svg { width: 104px; }
@@ -1259,22 +1263,64 @@ html[data-theme="dark"] .akte-delivery-plate {
 
 @media (max-width: 640px) {
   :root {
-    --header-h: 52px;
+    --header-h: 96px;
     --footer-h: 128px;
   }
 
   .app-header {
-    padding-left: max(10px, env(safe-area-inset-left));
-    padding-right: max(10px, env(safe-area-inset-right));
-    gap: 8px;
+    display: grid;
+    grid-template-columns: auto 1fr auto auto auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 6px;
+    padding: 6px max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));
+    padding-top: max(6px, env(safe-area-inset-top, 0px));
   }
 
-  .logo { height: 34px; }
+  .brand {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .admin-toggle {
+    grid-row: 1;
+    grid-column: 3;
+  }
+
+  .badge-admin-toggle {
+    grid-row: 1;
+    grid-column: 4;
+  }
 
   .theme-toggle {
-    width: 40px;
-    height: 40px;
+    grid-row: 1;
+    grid-column: 5;
+    width: 36px;
+    height: 36px;
   }
+
+  .header-main {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+    justify-content: center;
+  }
+
+  .logo { height: 32px; }
+
+  .next-akte-banner {
+    gap: 8px;
+    padding: 5px 10px;
+    max-width: min(100%, 320px);
+  }
+
+  .next-akte-car { width: 30px; }
+  .next-akte-label { font-size: 8px; }
+  .next-akte-divider { height: 20px; }
+  .next-akte-number { font-size: 18px; padding: 3px 8px; }
 
   .column-header {
     padding: 10px 12px;
