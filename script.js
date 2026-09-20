@@ -65,7 +65,7 @@ const KUERZEL_BADGE_STYLES = {
   MZ: 'mohamad',
   HK: 'hassan',
   HA: 'hassan',
-  ID: 'uploader-generic',
+  DI: 'uploader-generic',
   IZ: 'uploader-generic',
   TT: 'tolga',
 };
@@ -78,8 +78,8 @@ function badgeFromKuerzel(rawValue) {
   if (upper === 'B' || upper === 'HB' || upper === 'BERLINER' || upper === 'BERLIN') {
     return BERLIN_BADGE;
   }
-  if (upper === 'DI') {
-    return { cls: 'uploader-generic', label: 'ID' };
+  if (upper === 'ID') {
+    return { cls: 'uploader-generic', label: 'DI' };
   }
   if (/^[A-Z]{2,4}$/.test(upper)) {
     return {
@@ -128,8 +128,8 @@ const uploaderBadgeAliases = new Map([
   ['mohamed zahredine', { cls: 'mohamad', label: 'MZ' }],
   ['mohamad zahredine', { cls: 'mohamad', label: 'MZ' }],
   ['mohammed zahredine', { cls: 'mohamad', label: 'MZ' }],
-  ['diyar', { cls: 'uploader-generic', label: 'ID' }],
-  ['id', { cls: 'uploader-generic', label: 'ID' }],
+  ['diyar', { cls: 'uploader-generic', label: 'DI' }],
+  ['di', { cls: 'uploader-generic', label: 'DI' }],
   ['izzedin', { cls: 'uploader-generic', label: 'IZ' }],
   ['iz', { cls: 'uploader-generic', label: 'IZ' }],
   ['tolga', { cls: 'tolga', label: 'TT' }],
