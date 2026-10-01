@@ -804,9 +804,24 @@ html[data-theme="dark"] .akte-delivery-plate {
 }
 
 .standorte-title {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.1px;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  max-width: 92px;
+}
+
+.standorte-header-static {
+  cursor: default;
+}
+
+.standorte-header-static:hover {
+  border-color: var(--border);
+  background: var(--bg-panel);
+}
+
+.column-standorte.standorte-has-akten {
+  align-self: stretch;
 }
 
 .standorte-chevron {

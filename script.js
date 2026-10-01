@@ -44,17 +44,22 @@ const ASSIGN_API_URL = resolveAssignApiUrl();
 // Board configuration
 const REMOTE_SITE_ORDER = ['Berliner', 'Hannover', 'Nordhorn'];
 const REMOTE_SITE_COLUMNS = new Set(REMOTE_SITE_ORDER);
-const STANDORTE_COLUMN = 'Standorte';
+const STANDORTE_COLUMN = 'Externe Standorte';
 const STANDORTE_EXPANDED_KEY = 'svs-dashboard-standorte-expanded';
 
 const columns = [
   'Eingang',
-  STANDORTE_COLUMN,
   'Ramazan',
   'Robar',
+  STANDORTE_COLUMN,
   'Osama',
   'Geprüft',
 ];
+
+function shouldExpandStandorte(map) {
+  if (countStandorteAkten(map) > 0) return true;
+  return isStandorteExpanded();
+}
 
 function isStandorteExpanded() {
   try {
@@ -1962,17 +1967,21 @@ function buildAkteCardElement(item, positionCol) {
 
 function renderStandorteColumn(map) {
   const total = countStandorteAkten(map);
-  const expanded = isStandorteExpanded();
+  const expanded = shouldExpandStandorte(map);
+  const canToggle = total === 0;
 
   const colDiv = document.createElement('div');
   colDiv.className = `column column-standorte column-remote-site ${expanded ? 'standorte-expanded' : 'standorte-collapsed'}`;
+  if (!canToggle) colDiv.classList.add('standorte-has-akten');
   colDiv.dataset.column = STANDORTE_COLUMN;
 
-  const header = document.createElement('button');
-  header.type = 'button';
-  header.className = 'column-header standorte-header';
+  const header = document.createElement(canToggle ? 'button' : 'div');
+  if (canToggle) header.type = 'button';
+  header.className = `column-header standorte-header${canToggle ? '' : ' standorte-header-static'}`;
   header.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-  header.title = expanded ? 'Standorte einklappen' : 'Standorte ausklappen';
+  header.title = canToggle
+    ? (expanded ? 'Externe Standorte einklappen' : 'Externe Standorte ausklappen')
+    : 'Externe Standorte – offene Akten';
 
   const titleWrap = document.createElement('span');
   titleWrap.className = 'standorte-header-main';
@@ -2045,11 +2054,13 @@ function renderStandorteColumn(map) {
 
   colDiv.appendChild(body);
 
-  header.addEventListener('click', () => {
-    const next = !isStandorteExpanded();
-    setStandorteExpanded(next);
-    renderBoard(lastBoardData);
-  });
+  if (canToggle) {
+    header.addEventListener('click', () => {
+      const next = !isStandorteExpanded();
+      setStandorteExpanded(next);
+      renderBoard(lastBoardData);
+    });
+  }
 
   return colDiv;
 }
