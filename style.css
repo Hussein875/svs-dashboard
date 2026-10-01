@@ -11,6 +11,19 @@
   --radius-sm: 10px;
   --header-h: 72px;
   --footer-h: 56px;
+
+  /* Einheitliche Personen-/Standort-Farben (Badge + Spalten-Akzent) */
+  --person-ramazan: #8b5cf6;
+  --person-robar: #06b6d4;
+  --person-osama: #f59e0b;
+  --person-hj: #e11d48;
+  --person-ha: #ca8a04;
+  --person-hk: #059669;
+  --person-hu: #2563eb;
+  --person-mz: #0d9488;
+  --person-berlin: #dc2626;
+  --person-tolga: #6366f1;
+  --person-neutral: #64748b;
 }
 
 html[data-theme="light"] {
@@ -723,11 +736,11 @@ html[data-theme="dark"] .akte-delivery-plate {
   flex: 1;
 }
 
-.column-eingang  { --col-accent: #64748b; }
-.column-standorte { --col-accent: #64748b; }
-.column-ramazan  { --col-accent: #8b5cf6; }
-.column-robar    { --col-accent: #06b6d4; }
-.column-osama    { --col-accent: #f59e0b; }
+.column-eingang  { --col-accent: var(--person-neutral); }
+.column-standorte { --col-accent: var(--person-neutral); }
+.column-ramazan  { --col-accent: var(--person-ramazan); }
+.column-robar    { --col-accent: var(--person-robar); }
+.column-osama    { --col-accent: var(--person-osama); }
 .column-gepruft  { --col-accent: #22c55e; }
 
 .column.column-remote-site {
@@ -856,9 +869,9 @@ html[data-theme="dark"] .akte-delivery-plate {
   text-align: center;
 }
 
-.standorte-group-berliner { --standorte-accent: #dc2626; }
-.standorte-group-hannover { --standorte-accent: #7c3aed; }
-.standorte-group-nordhorn { --standorte-accent: #0891b2; }
+.standorte-group-berliner { --standorte-accent: var(--person-berlin); }
+.standorte-group-hannover { --standorte-accent: var(--person-hj); }
+.standorte-group-nordhorn { --standorte-accent: var(--person-mz); }
 
 .standorte-group-cards {
   display: flex;
@@ -1032,30 +1045,32 @@ html[data-theme="dark"] .akte-delivery-plate {
   font-weight: 800;
 }
 
-.card.extern.ramazan .extern-badge { background: #ea580c; }
-.card.extern.robar .extern-badge   { background: #7c3aed; }
-.card.extern.osama .extern-badge   { background: #16a34a; }
-.card.extern.hassan .extern-badge  { background: #ca8a04; }
-.card.extern.hj .extern-badge      { background: #7c3aed; }
-.card.extern.hussein .extern-badge { background: #2563eb; }
-.card.extern.hu .extern-badge      { background: #1e293b; }
-.card.extern.mohamad .extern-badge { background: #0d9488; }
-.card.extern.tolga .extern-badge   { background: #6366f1; }
-.card.extern.berlin .extern-badge  { background: #2563eb; font-size: 8px; }
-.card.extern.svs .extern-badge     { background: #64748b; }
+.card.extern.ramazan .extern-badge { background: var(--person-ramazan); }
+.card.extern.robar .extern-badge   { background: var(--person-robar); }
+.card.extern.osama .extern-badge   { background: var(--person-osama); }
+.card.extern.ha .extern-badge     { background: var(--person-ha); }
+.card.extern.hk .extern-badge     { background: var(--person-hk); }
+.card.extern.hj .extern-badge      { background: var(--person-hj); }
+.card.extern.hussein .extern-badge { background: var(--person-hu); }
+.card.extern.hu .extern-badge      { background: var(--person-hu); }
+.card.extern.mohamad .extern-badge { background: var(--person-mz); }
+.card.extern.tolga .extern-badge   { background: var(--person-tolga); }
+.card.extern.berlin .extern-badge  { background: var(--person-berlin); font-size: 8px; }
+.card.extern.svs .extern-badge     { background: var(--person-neutral); }
 .card.extern.bot .extern-badge     { background: #475569; }
-.card.extern.uploader-generic .extern-badge { background: #64748b; }
+.card.extern.uploader-generic .extern-badge { background: var(--person-neutral); }
 
-.card.extern.ramazan { border-left: 3px solid #ea580c; }
-.card.extern.robar   { border-left: 3px solid #7c3aed; }
-.card.extern.osama   { border-left: 3px solid #16a34a; }
-.card.extern.hassan  { border-left: 3px solid #ca8a04; }
-.card.extern.hj      { border-left: 3px solid #7c3aed; }
-.card.extern.hussein { border-left: 3px solid #2563eb; }
-.card.extern.hu      { border-left: 3px solid #94a3b8; }
-.card.extern.mohamad { border-left: 3px solid #0d9488; }
-.card.extern.tolga   { border-left: 3px solid #6366f1; }
-.card.extern.berlin  { border-left: 3px solid #2563eb; }
+.card.extern.ramazan { border-left: 3px solid var(--person-ramazan); }
+.card.extern.robar   { border-left: 3px solid var(--person-robar); }
+.card.extern.osama   { border-left: 3px solid var(--person-osama); }
+.card.extern.ha      { border-left: 3px solid var(--person-ha); }
+.card.extern.hk      { border-left: 3px solid var(--person-hk); }
+.card.extern.hj      { border-left: 3px solid var(--person-hj); }
+.card.extern.hussein { border-left: 3px solid var(--person-hu); }
+.card.extern.hu      { border-left: 3px solid var(--person-hu); }
+.card.extern.mohamad { border-left: 3px solid var(--person-mz); }
+.card.extern.tolga   { border-left: 3px solid var(--person-tolga); }
+.card.extern.berlin  { border-left: 3px solid var(--person-berlin); }
 .card.extern.svs,
 .card.extern.bot,
 .card.extern.uploader-generic { border-left: 3px solid #94a3b8; }
