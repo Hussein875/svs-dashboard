@@ -743,39 +743,14 @@ html[data-theme="dark"] .akte-delivery-plate {
 .column-osama    { --col-accent: var(--person-osama); }
 .column-gepruft  { --col-accent: #22c55e; }
 
-.column.column-standorte {
-  flex: 0 0 118px;
+.column.column-standorte.standorte-collapsed:not(.standorte-has-akten) {
   min-height: 0;
   align-self: flex-start;
-  gap: 6px;
-}
-
-.column.column-standorte.standorte-expanded,
-.column.column-standorte.standorte-has-akten {
-  flex-basis: 124px;
-  align-self: stretch;
-}
-
-.column-standorte .column-header {
-  padding: 10px 8px;
-  gap: 4px;
 }
 
 .column-standorte .standorte-title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.1px;
-  line-height: 1.15;
   flex: 1;
   min-width: 0;
-}
-
-.column-standorte .column-count {
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
-  font-size: 11px;
 }
 
 .standorte-header {
@@ -1440,17 +1415,6 @@ html[data-theme="dark"] .akte-delivery-plate {
     scroll-snap-align: start;
   }
 
-  .column.column-standorte {
-    flex: 0 0 112px;
-    width: 112px;
-  }
-
-  .column.column-standorte.standorte-expanded,
-  .column.column-standorte.standorte-has-akten {
-    flex-basis: 118px;
-    width: 118px;
-  }
-
   .column-cards {
     display: flex;
     flex-direction: column;
@@ -1683,10 +1647,6 @@ html[data-kiosk="1"] .board {
 
 html[data-kiosk="1"] .column {
   flex: 0 0 228px;
-}
-
-html[data-kiosk="1"] .column.column-standorte {
-  flex: 0 0 148px;
 }
 
 html[data-kiosk="1"] .column-header h2 {
