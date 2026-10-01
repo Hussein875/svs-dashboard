@@ -41,18 +41,38 @@ function resolveAssignApiUrl() {
 const ASSIGN_API_URL = resolveAssignApiUrl();
 
 // Board configuration
-const REMOTE_SITE_COLUMNS = new Set(['Berliner', 'Hannover', 'Nordhorn']);
+const REMOTE_SITE_ORDER = ['Berliner', 'Hannover', 'Nordhorn'];
+const REMOTE_SITE_COLUMNS = new Set(REMOTE_SITE_ORDER);
+const STANDORTE_COLUMN = 'Standorte';
+const STANDORTE_EXPANDED_KEY = 'svs-dashboard-standorte-expanded';
 
 const columns = [
   'Eingang',
-  'Berliner',
-  'Hannover',
-  'Nordhorn',
+  STANDORTE_COLUMN,
   'Ramazan',
   'Robar',
   'Osama',
   'Geprüft',
 ];
+
+function isStandorteExpanded() {
+  try {
+    const saved = localStorage.getItem(STANDORTE_EXPANDED_KEY);
+    if (saved === '1') return true;
+    if (saved === '0') return false;
+  } catch (_) {
+    /* localStorage blockiert */
+  }
+  return false;
+}
+
+function setStandorteExpanded(expanded) {
+  try {
+    localStorage.setItem(STANDORTE_EXPANDED_KEY, expanded ? '1' : '0');
+  } catch (_) {
+    /* optional */
+  }
+}
 
 const sheetAssigneeToColumn = new Map([
   ['b', 'Berliner'],
@@ -1135,10 +1155,22 @@ function getSpecialGutachtenConfig(type) {
 }
 
 function makeEmptyMap() {
-  return columns.reduce((map, col) => {
-    map[col] = [];
-    return map;
+  const map = columns.reduce((acc, col) => {
+    acc[col] = [];
+    return acc;
   }, {});
+  REMOTE_SITE_ORDER.forEach((site) => {
+    map[site] = [];
+  });
+  return map;
+}
+
+function sortAktenList(list) {
+  list.sort((a, b) => {
+    const aNum = Number.parseInt((a.nummer.match(/\d+/) ?? ['0'])[0], 10);
+    const bNum = Number.parseInt((b.nummer.match(/\d+/) ?? ['0'])[0], 10);
+    return aNum - bNum;
+  });
 }
 
 function escapeHtml(value) {
@@ -1605,11 +1637,15 @@ function updateTimerDisplay() {
   el.textContent = html;
 }
 
+const standorteGroupClassMap = {
+  Berliner: 'standorte-group-berliner',
+  Hannover: 'standorte-group-hannover',
+  Nordhorn: 'standorte-group-nordhorn',
+};
+
 const columnClassMap = {
   Eingang: 'column-eingang',
-  Berliner: 'column-berliner',
-  Hannover: 'column-hannover',
-  Nordhorn: 'column-nordhorn',
+  [STANDORTE_COLUMN]: 'column-standorte',
   Ramazan: 'column-ramazan',
   Robar: 'column-robar',
   Osama: 'column-osama',
@@ -1657,15 +1693,197 @@ function buildBoardMap(data) {
     map.Eingang.push(akte);
   });
 
-  for (const col of columns) {
-    map[col].sort((a, b) => {
-      const aNum = Number.parseInt((a.nummer.match(/\d+/) ?? ['0'])[0], 10);
-      const bNum = Number.parseInt((b.nummer.match(/\d+/) ?? ['0'])[0], 10);
-      return aNum - bNum;
-    });
-  }
+  REMOTE_SITE_ORDER.forEach((site) => sortAktenList(map[site]));
+  columns.forEach((col) => {
+    if (col === STANDORTE_COLUMN) return;
+    sortAktenList(map[col]);
+  });
 
   return map;
+}
+
+function countStandorteAkten(map) {
+  return REMOTE_SITE_ORDER.reduce((sum, site) => sum + (map[site]?.length || 0), 0);
+}
+
+function buildAkteCardElement(item, positionCol) {
+  const {
+    nummer, status, bearbeiter, gutachtenType, uploader, driveFolderId,
+  } = item;
+
+  const card = document.createElement('div');
+  card.className = 'card';
+  bindCardDriveLink(card, driveFolderId);
+  bindCardDrag(card, nummer, status);
+  applyCardHighlight(card, { nummer, col: positionCol });
+
+  const nummerEl = document.createElement('div');
+  nummerEl.className = 'card-number';
+  nummerEl.textContent = nummer;
+  card.appendChild(nummerEl);
+
+  const aktenNummer = extractAktenNummer(nummer);
+  const importDate = aktenNummer ? importDateByAkte.get(aktenNummer) : null;
+  const ageDays = getAgeDays(importDate);
+
+  if (ageDays !== null && ageDays >= SILENT_AKTE_DAYS) {
+    card.classList.add('card-silent');
+    appendCardTooltip(
+      card,
+      ageDays === 1 ? 'Seit 1 Tag ohne Bewegung' : `Seit ${ageDays} Tagen ohne Bewegung`,
+    );
+    const silentBadge = document.createElement('span');
+    silentBadge.className = 'silent-badge';
+    silentBadge.textContent = '⏳';
+    silentBadge.title = 'Stille Akte';
+    silentBadge.setAttribute('aria-label', 'Stille Akte');
+    card.appendChild(silentBadge);
+  } else if (ageDays !== null && ageDays >= AGE_HINT_DAYS) {
+    card.classList.add('card-aged');
+    appendCardTooltip(
+      card,
+      ageDays === 1 ? 'Seit 1 Tag im System' : `Seit ${ageDays} Tagen im System`,
+    );
+  }
+
+  if (status) {
+    appendCardTooltip(card, `Status: ${status}`);
+  }
+
+  if (bearbeiter) {
+    appendCardTooltip(card, `Bearbeiter: ${bearbeiter}`);
+  }
+
+  const specialGutachten = getSpecialGutachtenConfig(gutachtenType);
+  if (specialGutachten) {
+    card.classList.add(specialGutachten.cardClass);
+    appendCardTooltip(card, specialGutachten.label);
+    const typeBadge = document.createElement('div');
+    typeBadge.className = specialGutachten.badgeClass;
+    typeBadge.textContent = specialGutachten.icon;
+    typeBadge.title = specialGutachten.label;
+    typeBadge.setAttribute('aria-label', specialGutachten.label);
+    card.appendChild(typeBadge);
+  }
+
+  if (isUnknownStatus(status)) {
+    card.classList.add('card-unknown');
+    const unknownBadge = document.createElement('div');
+    unknownBadge.className = 'unknown-badge';
+    unknownBadge.textContent = '?';
+    unknownBadge.title = 'Status unbekannt – UX-Sync prüfen';
+    card.appendChild(unknownBadge);
+  }
+
+  applyCardStatus(card, status);
+
+  const uploaderInfo = resolveCardUploaderBadge(uploader);
+  if (uploaderInfo) {
+    card.classList.add('extern', uploaderInfo.badge.cls);
+    const badge = document.createElement('div');
+    badge.className = 'extern-badge';
+    badge.textContent = uploaderInfo.badge.label;
+    badge.title = uploaderInfo.tooltip;
+    badge.setAttribute('aria-label', uploaderInfo.tooltip);
+    card.appendChild(badge);
+    appendCardTooltip(card, uploaderInfo.tooltip);
+  }
+
+  return card;
+}
+
+function renderStandorteColumn(map) {
+  const total = countStandorteAkten(map);
+  const expanded = isStandorteExpanded();
+
+  const colDiv = document.createElement('div');
+  colDiv.className = `column column-standorte column-remote-site ${expanded ? 'standorte-expanded' : 'standorte-collapsed'}`;
+  colDiv.dataset.column = STANDORTE_COLUMN;
+
+  const header = document.createElement('button');
+  header.type = 'button';
+  header.className = 'column-header standorte-header';
+  header.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  header.title = expanded ? 'Standorte einklappen' : 'Standorte ausklappen';
+
+  const titleWrap = document.createElement('span');
+  titleWrap.className = 'standorte-header-main';
+
+  const title = document.createElement('span');
+  title.className = 'standorte-title';
+  title.textContent = STANDORTE_COLUMN;
+
+  const chevron = document.createElement('span');
+  chevron.className = 'standorte-chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+  chevron.textContent = expanded ? '▾' : '▸';
+
+  titleWrap.appendChild(title);
+  titleWrap.appendChild(chevron);
+
+  const countBadge = document.createElement('span');
+  countBadge.className = 'column-count';
+  countBadge.textContent = String(total);
+
+  const mini = document.createElement('span');
+  mini.className = 'standorte-mini';
+  mini.textContent = REMOTE_SITE_ORDER
+    .map((site) => {
+      const short = site === 'Berliner' ? 'B' : site === 'Hannover' ? 'H' : 'N';
+      return `${short}:${map[site]?.length || 0}`;
+    })
+    .join(' ');
+
+  header.appendChild(titleWrap);
+  header.appendChild(mini);
+  header.appendChild(countBadge);
+  colDiv.appendChild(header);
+
+  const body = document.createElement('div');
+  body.className = `standorte-body${expanded ? '' : ' is-collapsed'}`;
+  body.hidden = !expanded;
+
+  REMOTE_SITE_ORDER.forEach((site) => {
+    const items = map[site] || [];
+    const group = document.createElement('section');
+    group.className = `standorte-group ${standorteGroupClassMap[site] || ''}`;
+
+    const groupHead = document.createElement('div');
+    groupHead.className = 'standorte-group-head';
+
+    const groupLabel = document.createElement('span');
+    groupLabel.className = 'standorte-group-label';
+    groupLabel.textContent = site;
+
+    const groupCount = document.createElement('span');
+    groupCount.className = 'standorte-group-count';
+    groupCount.textContent = String(items.length);
+
+    groupHead.appendChild(groupLabel);
+    groupHead.appendChild(groupCount);
+    group.appendChild(groupHead);
+
+    const cardsWrap = document.createElement('div');
+    cardsWrap.className = 'standorte-group-cards';
+
+    items.forEach((item) => {
+      if (item.nummer.toLowerCase() === site.toLowerCase()) return;
+      cardsWrap.appendChild(buildAkteCardElement(item, site));
+    });
+
+    group.appendChild(cardsWrap);
+    body.appendChild(group);
+  });
+
+  colDiv.appendChild(body);
+
+  header.addEventListener('click', () => {
+    const next = !isStandorteExpanded();
+    setStandorteExpanded(next);
+    renderBoard(lastBoardData);
+  });
+
+  return colDiv;
 }
 
 function applyCardHighlight(card, { nummer, col }) {
@@ -1692,11 +1910,13 @@ function renderBoard(data) {
   const fragment = document.createDocumentFragment();
 
   columns.forEach((col) => {
+    if (col === STANDORTE_COLUMN) {
+      fragment.appendChild(renderStandorteColumn(map));
+      return;
+    }
+
     const colDiv = document.createElement('div');
     colDiv.className = `column ${columnClassMap[col] || ''}`;
-    if (REMOTE_SITE_COLUMNS.has(col)) {
-      colDiv.classList.add('column-remote-site');
-    }
     colDiv.dataset.column = col;
 
     const count = map[col].length;
@@ -1723,91 +1943,8 @@ function renderBoard(data) {
     bindColumnDrop(cardsWrap, col);
 
     map[col].forEach((item) => {
-      const {
-        nummer, status, bearbeiter, gutachtenType, uploader, driveFolderId,
-      } = item;
-      if (nummer.toLowerCase() === col.toLowerCase()) return;
-
-      const card = document.createElement('div');
-      card.className = 'card';
-      bindCardDriveLink(card, driveFolderId);
-      bindCardDrag(card, nummer, status);
-
-      applyCardHighlight(card, { nummer, col });
-
-      const nummerEl = document.createElement('div');
-      nummerEl.className = 'card-number';
-      nummerEl.textContent = nummer;
-      card.appendChild(nummerEl);
-
-      const aktenNummer = extractAktenNummer(nummer);
-      const importDate = aktenNummer ? importDateByAkte.get(aktenNummer) : null;
-      const ageDays = getAgeDays(importDate);
-
-      if (ageDays !== null && ageDays >= SILENT_AKTE_DAYS) {
-        card.classList.add('card-silent');
-        appendCardTooltip(
-          card,
-          ageDays === 1 ? 'Seit 1 Tag ohne Bewegung' : `Seit ${ageDays} Tagen ohne Bewegung`,
-        );
-        const silentBadge = document.createElement('span');
-        silentBadge.className = 'silent-badge';
-        silentBadge.textContent = '⏳';
-        silentBadge.title = 'Stille Akte';
-        silentBadge.setAttribute('aria-label', 'Stille Akte');
-        card.appendChild(silentBadge);
-      } else if (ageDays !== null && ageDays >= AGE_HINT_DAYS) {
-        card.classList.add('card-aged');
-        appendCardTooltip(
-          card,
-          ageDays === 1 ? 'Seit 1 Tag im System' : `Seit ${ageDays} Tagen im System`,
-        );
-      }
-
-      if (status) {
-        appendCardTooltip(card, `Status: ${status}`);
-      }
-
-      if (bearbeiter) {
-        appendCardTooltip(card, `Bearbeiter: ${bearbeiter}`);
-      }
-
-      const specialGutachten = getSpecialGutachtenConfig(gutachtenType);
-      if (specialGutachten) {
-        card.classList.add(specialGutachten.cardClass);
-        appendCardTooltip(card, specialGutachten.label);
-        const typeBadge = document.createElement('div');
-        typeBadge.className = specialGutachten.badgeClass;
-        typeBadge.textContent = specialGutachten.icon;
-        typeBadge.title = specialGutachten.label;
-        typeBadge.setAttribute('aria-label', specialGutachten.label);
-        card.appendChild(typeBadge);
-      }
-
-      if (isUnknownStatus(status)) {
-        card.classList.add('card-unknown');
-        const unknownBadge = document.createElement('div');
-        unknownBadge.className = 'unknown-badge';
-        unknownBadge.textContent = '?';
-        unknownBadge.title = 'Status unbekannt – UX-Sync prüfen';
-        card.appendChild(unknownBadge);
-      }
-
-      applyCardStatus(card, status);
-
-      const uploaderInfo = resolveCardUploaderBadge(uploader);
-      if (uploaderInfo) {
-        card.classList.add('extern', uploaderInfo.badge.cls);
-        const badge = document.createElement('div');
-        badge.className = 'extern-badge';
-        badge.textContent = uploaderInfo.badge.label;
-        badge.title = uploaderInfo.tooltip;
-        badge.setAttribute('aria-label', uploaderInfo.tooltip);
-        card.appendChild(badge);
-        appendCardTooltip(card, uploaderInfo.tooltip);
-      }
-
-      cardsWrap.appendChild(card);
+      if (item.nummer.toLowerCase() === col.toLowerCase()) return;
+      cardsWrap.appendChild(buildAkteCardElement(item, col));
     });
 
     colDiv.appendChild(cardsWrap);
@@ -1817,7 +1954,11 @@ function renderBoard(data) {
   board.appendChild(fragment);
 
   previousCardPositions = new Map();
+  REMOTE_SITE_ORDER.forEach((site) => {
+    map[site].forEach((item) => previousCardPositions.set(item.nummer, site));
+  });
   columns.forEach((col) => {
+    if (col === STANDORTE_COLUMN) return;
     map[col].forEach((item) => previousCardPositions.set(item.nummer, col));
   });
   isFirstBoardRender = false;

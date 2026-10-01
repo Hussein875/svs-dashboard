@@ -724,9 +724,7 @@ html[data-theme="dark"] .akte-delivery-plate {
 }
 
 .column-eingang  { --col-accent: #64748b; }
-.column-berliner { --col-accent: #dc2626; }
-.column-hannover { --col-accent: #7c3aed; }
-.column-nordhorn { --col-accent: #0891b2; }
+.column-standorte { --col-accent: #64748b; }
 .column-ramazan  { --col-accent: #8b5cf6; }
 .column-robar    { --col-accent: #06b6d4; }
 .column-osama    { --col-accent: #f59e0b; }
@@ -750,6 +748,130 @@ html[data-theme="dark"] .akte-delivery-plate {
   height: 22px;
   padding: 0 6px;
   font-size: 12px;
+}
+
+.column-standorte.standorte-collapsed {
+  min-height: 0;
+  align-self: flex-start;
+}
+
+.standorte-header {
+  width: 100%;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  background: var(--bg-panel);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--col-accent, var(--accent));
+  padding: 10px 10px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.standorte-header:hover {
+  border-color: var(--border-strong);
+  background: color-mix(in srgb, var(--bg-panel) 92%, var(--accent) 8%);
+}
+
+.standorte-header:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.standorte-header-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.standorte-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+}
+
+.standorte-chevron {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.standorte-mini {
+  flex: 1 1 100%;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.standorte-expanded .standorte-mini {
+  flex: 1 1 auto;
+  text-align: right;
+}
+
+.standorte-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.standorte-body.is-collapsed {
+  display: none;
+}
+
+.standorte-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+  padding: 2px 0 2px 8px;
+  border-left: 3px solid var(--standorte-accent, #94a3b8);
+}
+
+.standorte-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.standorte-group-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--pill-bg);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+}
+
+.standorte-group-berliner { --standorte-accent: #dc2626; }
+.standorte-group-hannover { --standorte-accent: #7c3aed; }
+.standorte-group-nordhorn { --standorte-accent: #0891b2; }
+
+.standorte-group-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.column-standorte .card {
+  padding: 8px 6px;
+}
+
+.column-standorte .card-number {
+  font-size: 14px;
 }
 
 /* ── Karten ─────────────────────────────────────────────── */
