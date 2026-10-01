@@ -724,10 +724,33 @@ html[data-theme="dark"] .akte-delivery-plate {
 }
 
 .column-eingang  { --col-accent: #64748b; }
+.column-berliner { --col-accent: #dc2626; }
+.column-hannover { --col-accent: #7c3aed; }
+.column-nordhorn { --col-accent: #0891b2; }
 .column-ramazan  { --col-accent: #8b5cf6; }
 .column-robar    { --col-accent: #06b6d4; }
 .column-osama    { --col-accent: #f59e0b; }
 .column-gepruft  { --col-accent: #22c55e; }
+
+.column.column-remote-site {
+  flex: 0 0 152px;
+}
+
+.column.column-remote-site .column-header {
+  padding: 10px 10px;
+}
+
+.column.column-remote-site .column-header h2 {
+  font-size: 13px;
+  letter-spacing: 0;
+}
+
+.column.column-remote-site .column-count {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  font-size: 12px;
+}
 
 /* ── Karten ─────────────────────────────────────────────── */
 .card {
@@ -1213,6 +1236,11 @@ html[data-theme="dark"] .akte-delivery-plate {
     scroll-snap-align: start;
   }
 
+  .column.column-remote-site {
+    flex: 0 0 138px;
+    width: 138px;
+  }
+
   .column-cards {
     display: flex;
     flex-direction: column;
@@ -1445,6 +1473,10 @@ html[data-kiosk="1"] .board {
 
 html[data-kiosk="1"] .column {
   flex: 0 0 228px;
+}
+
+html[data-kiosk="1"] .column.column-remote-site {
+  flex: 0 0 188px;
 }
 
 html[data-kiosk="1"] .column-header h2 {

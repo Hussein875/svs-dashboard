@@ -41,8 +41,46 @@ function resolveAssignApiUrl() {
 const ASSIGN_API_URL = resolveAssignApiUrl();
 
 // Board configuration
-const columns = ['Eingang', 'Ramazan', 'Robar', 'Osama', 'Geprüft'];
+const REMOTE_SITE_COLUMNS = new Set(['Berliner', 'Hannover', 'Nordhorn']);
+
+const columns = [
+  'Eingang',
+  'Berliner',
+  'Hannover',
+  'Nordhorn',
+  'Ramazan',
+  'Robar',
+  'Osama',
+  'Geprüft',
+];
+
+const sheetAssigneeToColumn = new Map([
+  ['b', 'Berliner'],
+  ['hj', 'Hannover'],
+  ['m', 'Nordhorn'],
+]);
+
 const workerColumnAliases = new Map([
+  ['b', 'Berliner'],
+  ['berlin', 'Berliner'],
+  ['berliner', 'Berliner'],
+  ['hb', 'Berliner'],
+  ['hussein selman', 'Berliner'],
+  ['hj', 'Hannover'],
+  ['hannover', 'Hannover'],
+  ['hussein jaber', 'Hannover'],
+  ['m', 'Nordhorn'],
+  ['mz', 'Nordhorn'],
+  ['nordhorn', 'Nordhorn'],
+  ['mohamed zahreddine', 'Nordhorn'],
+  ['mohamad zahreddine', 'Nordhorn'],
+  ['mohammed zahreddine', 'Nordhorn'],
+  ['mohamed zahhredine', 'Nordhorn'],
+  ['mohamad zahhredine', 'Nordhorn'],
+  ['mohammed zahhredine', 'Nordhorn'],
+  ['mohamed zahredine', 'Nordhorn'],
+  ['mohamad zahredine', 'Nordhorn'],
+  ['mohammed zahredine', 'Nordhorn'],
   ['ramazan', 'Ramazan'],
   ['ramazan dag', 'Ramazan'],
   ['robar', 'Robar'],
@@ -1350,8 +1388,16 @@ function normalizeWorkerName(rawValue) {
 }
 
 function resolveWorkerColumn(rawWorker) {
+  const compact = String(rawWorker || '').trim().toLowerCase();
+  if (sheetAssigneeToColumn.has(compact)) {
+    return sheetAssigneeToColumn.get(compact);
+  }
+
   const normalized = normalizeWorkerName(rawWorker);
   if (!normalized) return null;
+  if (sheetAssigneeToColumn.has(normalized)) {
+    return sheetAssigneeToColumn.get(normalized);
+  }
   if (workerColumnAliases.has(normalized)) return workerColumnAliases.get(normalized);
 
   const firstName = normalized.split(' ')[0];
@@ -1561,6 +1607,9 @@ function updateTimerDisplay() {
 
 const columnClassMap = {
   Eingang: 'column-eingang',
+  Berliner: 'column-berliner',
+  Hannover: 'column-hannover',
+  Nordhorn: 'column-nordhorn',
   Ramazan: 'column-ramazan',
   Robar: 'column-robar',
   Osama: 'column-osama',
@@ -1645,6 +1694,9 @@ function renderBoard(data) {
   columns.forEach((col) => {
     const colDiv = document.createElement('div');
     colDiv.className = `column ${columnClassMap[col] || ''}`;
+    if (REMOTE_SITE_COLUMNS.has(col)) {
+      colDiv.classList.add('column-remote-site');
+    }
     colDiv.dataset.column = col;
 
     const count = map[col].length;
