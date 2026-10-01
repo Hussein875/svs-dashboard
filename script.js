@@ -45,7 +45,14 @@ const ASSIGN_API_URL = resolveAssignApiUrl();
 const REMOTE_SITE_ORDER = ['Berliner', 'Hannover', 'Nordhorn'];
 const REMOTE_SITE_COLUMNS = new Set(REMOTE_SITE_ORDER);
 const STANDORTE_COLUMN = 'Externe Standorte';
+const STANDORTE_COLUMN_LABEL = 'Extern';
 const STANDORTE_EXPANDED_KEY = 'svs-dashboard-standorte-expanded';
+
+const STANDORTE_GROUP_LABELS = {
+  Berliner: 'Berlin',
+  Hannover: 'Hannover',
+  Nordhorn: 'Nordhorn',
+};
 
 const columns = [
   'Eingang',
@@ -1971,50 +1978,49 @@ function renderStandorteColumn(map) {
   const canToggle = total === 0;
 
   const colDiv = document.createElement('div');
-  colDiv.className = `column column-standorte column-remote-site ${expanded ? 'standorte-expanded' : 'standorte-collapsed'}`;
+  colDiv.className = `column column-standorte ${expanded ? 'standorte-expanded' : 'standorte-collapsed'}`;
   if (!canToggle) colDiv.classList.add('standorte-has-akten');
   colDiv.dataset.column = STANDORTE_COLUMN;
 
   const header = document.createElement(canToggle ? 'button' : 'div');
   if (canToggle) header.type = 'button';
-  header.className = `column-header standorte-header${canToggle ? '' : ' standorte-header-static'}`;
+  header.className = `column-header standorte-header${canToggle ? ' standorte-header-toggle' : ''}`;
   header.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  header.setAttribute('aria-label', STANDORTE_COLUMN);
   header.title = canToggle
     ? (expanded ? 'Externe Standorte einklappen' : 'Externe Standorte ausklappen')
-    : 'Externe Standorte – offene Akten';
+    : STANDORTE_COLUMN;
 
-  const titleWrap = document.createElement('span');
-  titleWrap.className = 'standorte-header-main';
-
-  const title = document.createElement('span');
+  const title = document.createElement('h2');
   title.className = 'standorte-title';
-  title.textContent = STANDORTE_COLUMN;
-
-  const chevron = document.createElement('span');
-  chevron.className = 'standorte-chevron';
-  chevron.setAttribute('aria-hidden', 'true');
-  chevron.textContent = expanded ? '▾' : '▸';
-
-  titleWrap.appendChild(title);
-  titleWrap.appendChild(chevron);
+  title.textContent = STANDORTE_COLUMN_LABEL;
 
   const countBadge = document.createElement('span');
   countBadge.className = 'column-count';
   countBadge.textContent = String(total);
 
-  const mini = document.createElement('span');
-  mini.className = 'standorte-mini';
-  mini.textContent = REMOTE_SITE_ORDER
-    .map((site) => {
-      const short = site === 'Berliner' ? 'B' : site === 'Hannover' ? 'H' : 'N';
-      return `${short}:${map[site]?.length || 0}`;
-    })
-    .join(' ');
-
-  header.appendChild(titleWrap);
-  header.appendChild(mini);
+  header.appendChild(title);
+  if (canToggle) {
+    const chevron = document.createElement('span');
+    chevron.className = 'standorte-chevron';
+    chevron.setAttribute('aria-hidden', 'true');
+    chevron.textContent = expanded ? '▾' : '▸';
+    header.appendChild(chevron);
+  }
   header.appendChild(countBadge);
   colDiv.appendChild(header);
+
+  if (!expanded) {
+    const mini = document.createElement('div');
+    mini.className = 'standorte-mini-row';
+    mini.textContent = REMOTE_SITE_ORDER
+      .map((site) => {
+        const short = site === 'Berliner' ? 'B' : site === 'Hannover' ? 'H' : 'N';
+        return `${short} ${map[site]?.length || 0}`;
+      })
+      .join(' · ');
+    colDiv.appendChild(mini);
+  }
 
   const body = document.createElement('div');
   body.className = `standorte-body${expanded ? '' : ' is-collapsed'}`;
@@ -2022,6 +2028,8 @@ function renderStandorteColumn(map) {
 
   REMOTE_SITE_ORDER.forEach((site) => {
     const items = map[site] || [];
+    if (!items.length) return;
+
     const group = document.createElement('section');
     group.className = `standorte-group ${standorteGroupClassMap[site] || ''}`;
 
@@ -2030,14 +2038,9 @@ function renderStandorteColumn(map) {
 
     const groupLabel = document.createElement('span');
     groupLabel.className = 'standorte-group-label';
-    groupLabel.textContent = site;
-
-    const groupCount = document.createElement('span');
-    groupCount.className = 'standorte-group-count';
-    groupCount.textContent = String(items.length);
+    groupLabel.textContent = STANDORTE_GROUP_LABELS[site] || site;
 
     groupHead.appendChild(groupLabel);
-    groupHead.appendChild(groupCount);
     group.appendChild(groupHead);
 
     const cardsWrap = document.createElement('div');
