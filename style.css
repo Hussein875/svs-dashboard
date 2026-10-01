@@ -724,7 +724,6 @@ html[data-theme="dark"] .akte-delivery-plate {
 }
 
 .column-eingang  { --col-accent: #64748b; }
-.column-hadi     { --col-accent: #6366f1; }
 .column-ramazan  { --col-accent: #8b5cf6; }
 .column-robar    { --col-accent: #06b6d4; }
 .column-osama    { --col-accent: #f59e0b; }
@@ -888,7 +887,6 @@ html[data-theme="dark"] .akte-delivery-plate {
   font-weight: 800;
 }
 
-.card.extern.hadi .extern-badge    { background: #0284c7; }
 .card.extern.ramazan .extern-badge { background: #ea580c; }
 .card.extern.robar .extern-badge   { background: #7c3aed; }
 .card.extern.osama .extern-badge   { background: #16a34a; }
@@ -903,7 +901,6 @@ html[data-theme="dark"] .akte-delivery-plate {
 .card.extern.bot .extern-badge     { background: #475569; }
 .card.extern.uploader-generic .extern-badge { background: #64748b; }
 
-.card.extern.hadi    { border-left: 3px solid #0284c7; }
 .card.extern.ramazan { border-left: 3px solid #ea580c; }
 .card.extern.robar   { border-left: 3px solid #7c3aed; }
 .card.extern.osama   { border-left: 3px solid #16a34a; }

@@ -17,10 +17,10 @@ const DASHBOARD_HEADER_LABELS = new Set([
 const IMPORT_LOG_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=A2:C`;
 const IMPORT_RUN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=G1`;
 const TAGES_STAT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=H2:K`;
-const ABSENCE_BADGES_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=L2:N5`;
+const ABSENCE_BADGES_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=L2:N4`;
 
 const ADMIN_TOKEN_KEY = 'svs-assign-token';
-const ASSIGN_COLUMNS = ['Hadi', 'Ramazan', 'Robar'];
+const ASSIGN_COLUMNS = ['Ramazan', 'Robar'];
 
 const DEFAULT_ASSIGN_API_URL = 'https://assign.69-62-113-32.sslip.io';
 
@@ -41,10 +41,8 @@ function resolveAssignApiUrl() {
 const ASSIGN_API_URL = resolveAssignApiUrl();
 
 // Board configuration
-const columns = ['Eingang', 'Hadi', 'Ramazan', 'Robar', 'Osama', 'Geprüft'];
+const columns = ['Eingang', 'Ramazan', 'Robar', 'Osama', 'Geprüft'];
 const workerColumnAliases = new Map([
-  ['hadi', 'Hadi'],
-  ['hadi issa', 'Hadi'],
   ['ramazan', 'Ramazan'],
   ['ramazan dag', 'Ramazan'],
   ['robar', 'Robar'],
@@ -147,7 +145,7 @@ const uploaderAccountAliases = new Map([
   ['tolgatanimaz', { cls: 'tolga', label: 'TT' }],
 ]);
 
-const BADGE_CONFIG_COLUMNS = ['Hadi', 'Ramazan', 'Robar', 'Osama'];
+const BADGE_CONFIG_COLUMNS = ['Ramazan', 'Robar', 'Osama'];
 const ABSENCE_BADGE_TYPES = {
   urlaub: { emoji: '🌴', className: 'column-status-vacation', labelPrefix: 'Im Urlaub bis' },
   krank: { emoji: '✚', className: 'column-status-sick', labelPrefix: 'Krank bis' },
@@ -909,10 +907,10 @@ function setStargutachterCount(count) {
   else widget.classList.add('state-green');
 
   widget.title = n === null
-    ? 'Stargutachter-Fälle für Hadi im Drive-Ordner'
+    ? 'Stargutachter-Fälle im Drive-Ordner'
     : n === 0
-      ? 'Keine offenen Stargutachter-Fälle für Hadi'
-      : `${n} Stargutachter-Fall${n === 1 ? '' : 'e'} für Hadi offen`;
+      ? 'Keine offenen Stargutachter-Fälle'
+      : `${n} Stargutachter-Fall${n === 1 ? '' : 'e'} offen`;
 }
 
 function parseTagesStatRow(row) {
@@ -1563,7 +1561,6 @@ function updateTimerDisplay() {
 
 const columnClassMap = {
   Eingang: 'column-eingang',
-  Hadi: 'column-hadi',
   Ramazan: 'column-ramazan',
   Robar: 'column-robar',
   Osama: 'column-osama',
