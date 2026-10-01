@@ -20,6 +20,7 @@ const TAGES_STAT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/
 const ABSENCE_BADGES_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=L2:N4`;
 
 const ADMIN_TOKEN_KEY = 'svs-assign-token';
+const KI_AKTEN_STORAGE_KEY = 'svs-dashboard-ki-akten';
 const ASSIGN_COLUMNS = ['Ramazan', 'Robar'];
 
 const DEFAULT_ASSIGN_API_URL = 'https://assign.69-62-113-32.sslip.io';
@@ -353,6 +354,9 @@ let previousCardPositions = new Map();
 let knownAkten = new Set();
 let isFirstBoardRender = true;
 let adminUnlocked = false;
+let kiMarkedAkten = new Set();
+let akteContextMenuTarget = null;
+let akteContextMenuBound = false;
 let pinSubmitInFlight = false;
 let badgeSaveInFlight = false;
 const assignInFlightKeys = new Set();
@@ -492,8 +496,165 @@ function lockAdmin() {
   setAdminToken('');
   adminUnlocked = false;
   hideBadgeAdminModal();
+  hideAkteContextMenu();
   updateAdminUi();
   if (lastBoardData.length) renderBoard(lastBoardData);
+}
+
+function loadKiMarkedAkten() {
+  kiMarkedAkten = new Set();
+  try {
+    const raw = localStorage.getItem(KI_AKTEN_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return;
+    parsed.forEach((entry) => {
+      const key = String(entry || '').trim();
+      if (key) kiMarkedAkten.add(key);
+    });
+  } catch (_) {
+    /* optional */
+  }
+}
+
+function saveKiMarkedAkten() {
+  try {
+    localStorage.setItem(KI_AKTEN_STORAGE_KEY, JSON.stringify([...kiMarkedAkten]));
+  } catch (_) {
+    /* optional */
+  }
+}
+
+function isKiMarkedAkte(nummer) {
+  const key = String(nummer || '').trim();
+  return key && kiMarkedAkten.has(key);
+}
+
+function markKiAkte(nummer) {
+  const key = String(nummer || '').trim();
+  if (!key) return;
+  kiMarkedAkten.add(key);
+  saveKiMarkedAkten();
+}
+
+function clearKiAkte(nummer) {
+  const key = String(nummer || '').trim();
+  if (!key) return;
+  kiMarkedAkten.delete(key);
+  saveKiMarkedAkten();
+}
+
+function startKiAkteProcessing(akte) {
+  const nummer = String(akte?.nummer || '').trim();
+  if (!nummer) return;
+
+  markKiAkte(nummer);
+  // Platzhalter bis KI-Backend angebunden ist.
+  console.info('[KI] Bearbeitung angestoßen (Platzhalter):', {
+    nummer,
+    status: akte?.status || '',
+    bearbeiter: akte?.bearbeiter || '',
+    driveFolderId: akte?.driveFolderId || '',
+  });
+
+  if (lastBoardData.length) renderBoard(lastBoardData);
+}
+
+function appendKiProcessingBadge(card) {
+  const badge = document.createElement('div');
+  badge.className = 'ki-processing-badge';
+  badge.textContent = '🤖';
+  badge.title = 'KI-Bearbeitung vorgemerkt';
+  badge.setAttribute('aria-label', 'KI-Bearbeitung vorgemerkt');
+  card.appendChild(badge);
+}
+
+function hideAkteContextMenu() {
+  const menu = document.getElementById('akteContextMenu');
+  if (!menu) return;
+  menu.hidden = true;
+  akteContextMenuTarget = null;
+}
+
+function showAkteContextMenu(event, akte) {
+  if (!adminUnlocked) return;
+
+  const menu = document.getElementById('akteContextMenu');
+  if (!menu) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  akteContextMenuTarget = akte;
+
+  const startBtn = menu.querySelector('[data-action="ki-start"]');
+  const clearBtn = menu.querySelector('[data-action="ki-clear"]');
+  const marked = isKiMarkedAkte(akte.nummer);
+
+  if (startBtn) startBtn.hidden = marked;
+  if (clearBtn) clearBtn.hidden = !marked;
+
+  menu.hidden = false;
+
+  const menuWidth = menu.offsetWidth || 220;
+  const menuHeight = menu.offsetHeight || 80;
+  const padding = 8;
+  let left = event.clientX;
+  let top = event.clientY;
+  left = Math.min(left, window.innerWidth - menuWidth - padding);
+  top = Math.min(top, window.innerHeight - menuHeight - padding);
+
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
+}
+
+function bindAkteContextMenuControls() {
+  if (akteContextMenuBound) return;
+  akteContextMenuBound = true;
+
+  const menu = document.getElementById('akteContextMenu');
+  if (!menu) return;
+
+  menu.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-action]');
+    if (!btn || !akteContextMenuTarget) return;
+
+    const action = btn.getAttribute('data-action');
+    const target = akteContextMenuTarget;
+    hideAkteContextMenu();
+
+    if (action === 'ki-start') {
+      startKiAkteProcessing(target);
+      return;
+    }
+    if (action === 'ki-clear') {
+      clearKiAkte(target.nummer);
+      if (lastBoardData.length) renderBoard(lastBoardData);
+    }
+  });
+
+  document.addEventListener('click', (event) => {
+    if (menu.hidden) return;
+    if (event.target.closest('#akteContextMenu')) return;
+    hideAkteContextMenu();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') hideAkteContextMenu();
+  });
+
+  window.addEventListener('scroll', hideAkteContextMenu, { passive: true });
+  window.addEventListener('resize', hideAkteContextMenu);
+}
+
+function bindCardAdminContextMenu(card, akte) {
+  if (card.dataset.contextBound === '1') return;
+  card.dataset.contextBound = '1';
+
+  card.addEventListener('contextmenu', (event) => {
+    if (!adminUnlocked) return;
+    showAkteContextMenu(event, akte);
+  });
 }
 
 function bindAdminControls() {
@@ -1712,8 +1873,10 @@ function buildAkteCardElement(item, positionCol) {
 
   const card = document.createElement('div');
   card.className = 'card';
+  card.dataset.akte = nummer;
   bindCardDriveLink(card, driveFolderId);
   bindCardDrag(card, nummer, status);
+  bindCardAdminContextMenu(card, item);
   applyCardHighlight(card, { nummer, col: positionCol });
 
   const nummerEl = document.createElement('div');
@@ -1786,6 +1949,12 @@ function buildAkteCardElement(item, positionCol) {
     badge.setAttribute('aria-label', uploaderInfo.tooltip);
     card.appendChild(badge);
     appendCardTooltip(card, uploaderInfo.tooltip);
+  }
+
+  if (isKiMarkedAkte(nummer)) {
+    card.classList.add('card-ki-marked');
+    appendKiProcessingBadge(card);
+    appendCardTooltip(card, 'KI-Bearbeitung vorgemerkt');
   }
 
   return card;
@@ -2089,11 +2258,13 @@ async function requestWakeLock() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  loadKiMarkedAkten();
   initKioskMode();
   initTheme();
   bindThemeToggle();
   bindAdminControls();
   bindBadgeAdminControls();
+  bindAkteContextMenuControls();
 
   ensureOpenCountWidget();
   fetchAbsenceBadges({ force: true }).then((changed) => {

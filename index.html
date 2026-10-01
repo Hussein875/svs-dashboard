@@ -31,7 +31,7 @@
       } catch (_) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=71">
+  <link rel="stylesheet" href="style.css?v=72">
 </head>
 <body class="dashboard">
 
@@ -202,6 +202,16 @@
     </div>
   </div>
 
-<script src="script.js?v=106"></script>
+  <div id="akteContextMenu" class="akte-context-menu" hidden role="menu" aria-label="Akten-Aktionen">
+    <button type="button" class="akte-context-item" data-action="ki-start" role="menuitem">
+      <span class="akte-context-icon" aria-hidden="true">🤖</span>
+      Mit KI bearbeiten
+    </button>
+    <button type="button" class="akte-context-item" data-action="ki-clear" role="menuitem" hidden>
+      KI-Markierung entfernen
+    </button>
+  </div>
+
+<script src="script.js?v=107"></script>
 </body>
 </html>

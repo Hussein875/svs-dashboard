@@ -1120,6 +1120,73 @@ html[data-theme="dark"] .akte-delivery-plate {
   line-height: 17px;
 }
 
+.ki-processing-badge {
+  position: absolute;
+  bottom: 6px;
+  left: 8px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
+  pointer-events: none;
+}
+
+.card:has(.gutachten-type-badge) .ki-processing-badge {
+  bottom: 28px;
+}
+
+.card:has(.unknown-badge) .ki-processing-badge {
+  bottom: 6px;
+}
+
+.card-ki-marked {
+  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.22);
+}
+
+.akte-context-menu {
+  position: fixed;
+  z-index: 250;
+  min-width: 210px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow);
+}
+
+.akte-context-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.akte-context-item:hover,
+.akte-context-item:focus-visible {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  outline: none;
+}
+
+.akte-context-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
 .gutachten-legend-badge {
   width: 16px;
   min-width: 16px;
