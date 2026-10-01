@@ -371,6 +371,7 @@ let akteContextMenuBound = false;
 let pinSubmitInFlight = false;
 let badgeSaveInFlight = false;
 const assignInFlightKeys = new Set();
+const kiWatchTimers = new Map();
 function getAdminToken() {
   try {
     return sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
@@ -572,7 +573,11 @@ async function updateKiAkteOnServer(akte, action) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ akte: nummer, action }),
+      body: JSON.stringify({
+        akte: nummer,
+        action,
+        driveFolderId: akte?.driveFolderId || '',
+      }),
     });
     const data = await res.json().catch(() => ({}));
 
@@ -585,24 +590,75 @@ async function updateKiAkteOnServer(akte, action) {
 
     if (!res.ok || !data.ok) {
       revertOptimisticKiStatus(snapshot);
-      console.error('[KI] Sheet-Update fehlgeschlagen:', data.error || `HTTP ${res.status}`);
-      return false;
+      const error = data.error || `HTTP ${res.status}`;
+      console.error('[KI] Start fehlgeschlagen:', error);
+      return { ok: false, error };
     }
 
-    return true;
+    return { ok: true, processing: Boolean(data.processing), job: data.job || null };
   } catch (err) {
     revertOptimisticKiStatus(snapshot);
     console.error('[KI] API nicht erreichbar:', err);
-    return false;
+    return { ok: false, error: err.message || 'Netzwerkfehler' };
   }
 }
 
 function startKiAkteProcessing(akte) {
-  updateKiAkteOnServer(akte, 'start').then((ok) => {
-    if (ok) {
-      console.info('[KI] Vorgemerkt im Sheet:', akte?.nummer);
+  const nummer = String(akte?.nummer || '').trim();
+  const card = nummer
+    ? document.querySelector(`.card[data-akte="${CSS.escape(nummer)}"]`)
+    : null;
+  if (card) showAssignFeedback(card, 'pending', 'KI startet…');
+
+  updateKiAkteOnServer(akte, 'start').then((result) => {
+    if (!result?.ok) {
+      if (card) showAssignFeedback(card, 'error', result?.error || 'KI konnte nicht gestartet werden');
+      return;
     }
+    if (card) showAssignFeedback(card, 'ok', 'Bearbeitung gestartet');
+    watchKiJob(nummer);
   });
+}
+
+function watchKiJob(nummer) {
+  const key = normalizeAkteKey(nummer);
+  if (!key || kiWatchTimers.has(key)) return;
+
+  const started = Date.now();
+  const timer = window.setInterval(async () => {
+    if (Date.now() - started > 5 * 60_000) {
+      window.clearInterval(timer);
+      kiWatchTimers.delete(key);
+      return;
+    }
+
+    const token = getAdminToken();
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${ASSIGN_API_URL}/api/ki/jobs/${encodeURIComponent(nummer)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json().catch(() => ({}));
+      const status = data.job?.status;
+      if (status !== 'opened' && status !== 'error') return;
+
+      window.clearInterval(timer);
+      kiWatchTimers.delete(key);
+      const card = document.querySelector(`.card[data-akte="${CSS.escape(nummer)}"]`);
+      if (!card) return;
+      showAssignFeedback(
+        card,
+        status === 'opened' ? 'ok' : 'error',
+        data.job?.message || status,
+      );
+    } catch (_) {
+      /* nächster Versuch */
+    }
+  }, 8000);
+
+  kiWatchTimers.set(key, timer);
 }
 
 function clearKiAkte(nummer) {
@@ -613,8 +669,8 @@ function appendKiProcessingBadge(card) {
   const badge = document.createElement('div');
   badge.className = 'ki-processing-badge';
   badge.textContent = '🤖';
-  badge.title = 'KI-Bearbeitung vorgemerkt';
-  badge.setAttribute('aria-label', 'KI-Bearbeitung vorgemerkt');
+  badge.title = 'KI-Bearbeitung läuft';
+  badge.setAttribute('aria-label', 'KI-Bearbeitung läuft');
   card.appendChild(badge);
 }
 
@@ -2006,7 +2062,7 @@ function buildAkteCardElement(item, positionCol) {
   if (isKiMarkedAkte(nummer, item)) {
     card.classList.add('card-ki-marked');
     appendKiProcessingBadge(card);
-    appendCardTooltip(card, 'KI-Bearbeitung vorgemerkt');
+    appendCardTooltip(card, 'KI-Bearbeitung läuft');
   }
 
   return card;
