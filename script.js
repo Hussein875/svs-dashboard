@@ -48,10 +48,10 @@ const STANDORTE_COLUMN = 'Externe Standorte';
 const STANDORTE_EXPANDED_KEY = 'svs-dashboard-standorte-expanded';
 
 const columns = [
+  STANDORTE_COLUMN,
   'Eingang',
   'Ramazan',
   'Robar',
-  STANDORTE_COLUMN,
   'Osama',
   'Geprüft',
 ];
