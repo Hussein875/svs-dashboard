@@ -1135,6 +1135,10 @@ html[data-theme="dark"] .akte-delivery-plate {
   box-shadow: var(--shadow);
 }
 
+.akte-context-item[hidden] {
+  display: none !important;
+}
+
 .akte-context-item {
   display: flex;
   align-items: center;

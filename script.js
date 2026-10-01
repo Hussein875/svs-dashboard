@@ -7,11 +7,12 @@ const SILENT_AKTE_DAYS = 7;
 const SESSION_PEAK_KEY = 'svs-dashboard-session-peak';
 const SOUND_PREF_KEY = 'svs-dashboard-sound-enabled';
 const SHEET_ID = '10mfm9SVVDiWcxnfK2QuUCj3msaVFBQIQx34NnPlUEo4';
-const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A1:F`;
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Dashboard&range=A1:G`;
 const DRIVE_FOLDER_URL_PREFIX = 'https://drive.google.com/drive/folders/';
 const DASHBOARD_HEADER_LABELS = new Set([
   'aktennummer', 'bearbeiter', 'status',
   'gutachten-typ', 'gutachten_typ', 'kürzel', 'kurzel', 'hochgeladen_von',
+  'drive_ordner_id', 'folder_id', 'ki', 'ki_vorgemerkt',
   'eingang', 'nummer',
 ]);
 const IMPORT_LOG_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=A2:C`;
@@ -20,7 +21,6 @@ const TAGES_STAT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/
 const ABSENCE_BADGES_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=L2:N4`;
 
 const ADMIN_TOKEN_KEY = 'svs-assign-token';
-const KI_AKTEN_STORAGE_KEY = 'svs-dashboard-ki-akten';
 const ASSIGN_COLUMNS = ['Ramazan', 'Robar'];
 
 const DEFAULT_ASSIGN_API_URL = 'https://assign.69-62-113-32.sslip.io';
@@ -366,7 +366,6 @@ let previousCardPositions = new Map();
 let knownAkten = new Set();
 let isFirstBoardRender = true;
 let adminUnlocked = false;
-let kiMarkedAkten = new Set();
 let akteContextMenuTarget = null;
 let akteContextMenuBound = false;
 let pinSubmitInFlight = false;
@@ -513,63 +512,101 @@ function lockAdmin() {
   if (lastBoardData.length) renderBoard(lastBoardData);
 }
 
-function loadKiMarkedAkten() {
-  kiMarkedAkten = new Set();
+function parseKiSheetFlag(raw) {
+  const value = String(raw ?? '').trim().toLowerCase();
+  if (!value) return false;
+  return value === 'ki' || value === '1' || value === 'ja' || value === 'yes' || value === '🤖';
+}
+
+function isKiMarkedAkte(nummer, item) {
+  if (item && typeof item.kiMarked === 'boolean') return item.kiMarked;
+  const key = normalizeAkteKey(nummer);
+  if (!key || !lastBoardData.length) return false;
+  const row = lastBoardData.find((entry) => normalizeAkteKey(entry.Eingang) === key);
+  return row ? parseKiSheetFlag(row.KiStatus) : false;
+}
+
+function applyOptimisticKiStatus(nummer, kiStatus) {
+  const targetKey = normalizeAkteKey(nummer);
+  if (!targetKey || !lastBoardData.length) return null;
+
+  const snapshot = lastBoardData.map((row) => ({ ...row }));
+  let found = false;
+
+  lastBoardData = lastBoardData.map((row) => {
+    if (normalizeAkteKey(row.Eingang) !== targetKey) return row;
+    found = true;
+    return { ...row, KiStatus: kiStatus };
+  });
+
+  if (!found) return null;
+  renderBoard(lastBoardData);
+  return snapshot;
+}
+
+function revertOptimisticKiStatus(snapshot) {
+  if (!snapshot) return;
+  lastBoardData = snapshot;
+  renderBoard(lastBoardData);
+}
+
+async function updateKiAkteOnServer(akte, action) {
+  const nummer = String(akte?.nummer || akte || '').trim();
+  const akteKey = normalizeAkteKey(nummer);
+  if (!adminUnlocked || !akteKey) return false;
+
+  const token = getAdminToken();
+  if (!token) {
+    lockAdmin();
+    showPinModal();
+    return false;
+  }
+
+  const kiStatus = action === 'start' ? 'ki' : '';
+  const snapshot = applyOptimisticKiStatus(nummer, kiStatus);
+
   try {
-    const raw = localStorage.getItem(KI_AKTEN_STORAGE_KEY);
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return;
-    parsed.forEach((entry) => {
-      const key = String(entry || '').trim();
-      if (key) kiMarkedAkten.add(key);
+    const res = await fetch(`${ASSIGN_API_URL}/api/ki`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ akte: nummer, action }),
     });
-  } catch (_) {
-    /* optional */
+    const data = await res.json().catch(() => ({}));
+
+    if (res.status === 401) {
+      revertOptimisticKiStatus(snapshot);
+      lockAdmin();
+      showPinModal();
+      return false;
+    }
+
+    if (!res.ok || !data.ok) {
+      revertOptimisticKiStatus(snapshot);
+      console.error('[KI] Sheet-Update fehlgeschlagen:', data.error || `HTTP ${res.status}`);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    revertOptimisticKiStatus(snapshot);
+    console.error('[KI] API nicht erreichbar:', err);
+    return false;
   }
-}
-
-function saveKiMarkedAkten() {
-  try {
-    localStorage.setItem(KI_AKTEN_STORAGE_KEY, JSON.stringify([...kiMarkedAkten]));
-  } catch (_) {
-    /* optional */
-  }
-}
-
-function isKiMarkedAkte(nummer) {
-  const key = String(nummer || '').trim();
-  return key && kiMarkedAkten.has(key);
-}
-
-function markKiAkte(nummer) {
-  const key = String(nummer || '').trim();
-  if (!key) return;
-  kiMarkedAkten.add(key);
-  saveKiMarkedAkten();
-}
-
-function clearKiAkte(nummer) {
-  const key = String(nummer || '').trim();
-  if (!key) return;
-  kiMarkedAkten.delete(key);
-  saveKiMarkedAkten();
 }
 
 function startKiAkteProcessing(akte) {
-  const nummer = String(akte?.nummer || '').trim();
-  if (!nummer) return;
-
-  markKiAkte(nummer);
-  // Platzhalter bis KI-Backend angebunden ist.
-  console.info('[KI] Bearbeitung angestoßen (Platzhalter):', {
-    nummer,
-    status: akte?.status || '',
-    bearbeiter: akte?.bearbeiter || '',
-    driveFolderId: akte?.driveFolderId || '',
+  updateKiAkteOnServer(akte, 'start').then((ok) => {
+    if (ok) {
+      console.info('[KI] Vorgemerkt im Sheet:', akte?.nummer);
+    }
   });
+}
 
-  if (lastBoardData.length) renderBoard(lastBoardData);
+function clearKiAkte(nummer) {
+  updateKiAkteOnServer({ nummer }, 'clear');
 }
 
 function appendKiProcessingBadge(card) {
@@ -601,7 +638,7 @@ function showAkteContextMenu(event, akte) {
 
   const startBtn = menu.querySelector('[data-action="ki-start"]');
   const clearBtn = menu.querySelector('[data-action="ki-clear"]');
-  const marked = isKiMarkedAkte(akte.nummer);
+  const marked = isKiMarkedAkte(akte.nummer, akte);
 
   if (startBtn) startBtn.hidden = marked;
   if (clearBtn) clearBtn.hidden = !marked;
@@ -1721,6 +1758,7 @@ async function fetchData({ force = false } = {}) {
       const gutachtenType = String(row.c?.[3]?.v ?? '').trim().toLowerCase();
       const uploader = String(row.c?.[4]?.v ?? '').trim();
       const driveFolderId = String(row.c?.[5]?.v ?? '').trim();
+      const kiStatus = String(row.c?.[6]?.v ?? '').trim();
       return {
         Eingang: eingang,
         Bearbeiter: bearbeiter,
@@ -1728,6 +1766,7 @@ async function fetchData({ force = false } = {}) {
         GutachtenType: gutachtenType,
         Uploader: uploader,
         DriveFolderId: driveFolderId,
+        KiStatus: kiStatus,
       };
     }).filter((row) => {
       if (!row.Eingang) return false;
@@ -1843,6 +1882,7 @@ function buildBoardMap(data) {
       gutachtenType: row.GutachtenType || '',
       uploader: row.Uploader || '',
       driveFolderId: row.DriveFolderId || '',
+      kiMarked: parseKiSheetFlag(row.KiStatus),
     };
 
     if (isGeprueftStatus(status)) {
@@ -1963,7 +2003,7 @@ function buildAkteCardElement(item, positionCol) {
     appendCardTooltip(card, uploaderInfo.tooltip);
   }
 
-  if (isKiMarkedAkte(nummer)) {
+  if (isKiMarkedAkte(nummer, item)) {
     card.classList.add('card-ki-marked');
     appendKiProcessingBadge(card);
     appendCardTooltip(card, 'KI-Bearbeitung vorgemerkt');
@@ -2272,7 +2312,6 @@ async function requestWakeLock() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  loadKiMarkedAkten();
   initKioskMode();
   initTheme();
   bindThemeToggle();
