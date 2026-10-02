@@ -373,6 +373,20 @@ let badgeSaveInFlight = false;
 const assignInFlightKeys = new Set();
 const kiWatchTimers = new Map();
 const serverKiAkten = new Set();
+const SERVER_KI_JOB_STATUSES = new Set(['queued', 'running', 'stopping', 'opened']);
+
+function collectServerKiAktenFromPayload(data) {
+  const list = [];
+  if (Array.isArray(data?.akten)) list.push(...data.akten);
+  if (Array.isArray(data?.jobs)) {
+    for (const job of data.jobs) {
+      if (job.kind && job.kind !== 'ki') continue;
+      if (!SERVER_KI_JOB_STATUSES.has(job.status)) continue;
+      if (job.akte) list.push(job.akte);
+    }
+  }
+  return list;
+}
 function getAdminToken() {
   try {
     return sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
@@ -562,7 +576,7 @@ async function fetchActiveKiBadges() {
     if (!res.ok) return false;
     const data = await res.json().catch(() => ({}));
     if (!data.ok) return false;
-    const changed = syncServerKiAkten(data.akten);
+    const changed = syncServerKiAkten(collectServerKiAktenFromPayload(data));
     updateBotsToggleIndicator(Array.isArray(data.jobs) ? data.jobs : []);
     return changed;
   } catch {
@@ -923,10 +937,9 @@ async function refreshBotsList() {
     const jobs = Array.isArray(data.jobs) ? data.jobs : [];
     renderBotsList(jobs, { allowStop: true });
     updateBotsToggleIndicator(jobs);
-    const kiJobs = jobs
-      .filter((job) => job.kind === 'ki' && ['queued', 'running', 'stopping', 'opened'].includes(job.status))
-      .map((job) => job.akte);
-    if (syncServerKiAkten(kiJobs) && lastBoardData.length) renderBoard(lastBoardData);
+    if (syncServerKiAkten(collectServerKiAktenFromPayload({ jobs })) && lastBoardData.length) {
+      renderBoard(lastBoardData);
+    }
   } catch (err) {
     if (errorEl) errorEl.textContent = err.message || 'Netzwerkfehler';
   }
@@ -946,7 +959,9 @@ async function refreshPublicBotsList() {
     const jobs = Array.isArray(data.jobs) ? data.jobs : [];
     renderBotsList(jobs, { allowStop: false });
     updateBotsToggleIndicator(jobs);
-    if (syncServerKiAkten(data.akten) && lastBoardData.length) renderBoard(lastBoardData);
+    if (syncServerKiAkten(collectServerKiAktenFromPayload(data)) && lastBoardData.length) {
+      renderBoard(lastBoardData);
+    }
   } catch (err) {
     if (errorEl) errorEl.textContent = err.message || 'Netzwerkfehler';
   }
@@ -954,12 +969,14 @@ async function refreshPublicBotsList() {
 
 function updateBotsModalAdminActions() {
   const stopAllBtn = document.getElementById('botsStopAll');
+  const clearFinishedBtn = document.getElementById('botsClearFinished');
   const hint = document.querySelector('#botsModal .badge-admin-hint');
   if (stopAllBtn) stopAllBtn.hidden = !adminUnlocked;
+  if (clearFinishedBtn) clearFinishedBtn.hidden = !adminUnlocked;
   if (hint) {
     hint.textContent = adminUnlocked
-      ? 'Was gerade läuft, und seit wann. Stopp beendet den Auftrag, bevor er weiter speichert.'
-      : 'Was gerade läuft (nur Anzeige). Stoppen geht nur mit Admin-PIN.';
+      ? 'Laufende und kürzlich beendete Aufträge. Stopp nur bei wartend/laufend; „Erledigte entfernen“ räumt die Liste auf.'
+      : 'Was gerade läuft (nur Anzeige). Stoppen und Aufräumen geht nur mit Admin-PIN.';
   }
 }
 
@@ -976,6 +993,28 @@ function showBotsModal() {
   refreshBotsModal();
   if (botsPollTimer) window.clearInterval(botsPollTimer);
   botsPollTimer = window.setInterval(refreshBotsModal, 3000);
+}
+
+async function clearFinishedBots() {
+  const token = getAdminToken();
+  if (!token) return;
+  const res = await fetch(`${ASSIGN_API_URL}/api/bots/clear-finished`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: '{}',
+  });
+  if (res.status === 401) {
+    lockAdmin();
+    showPinModal();
+    return;
+  }
+  await refreshBotsList();
+  if (lastBoardData.length) await fetchActiveKiBadges().then((changed) => {
+    if (changed) renderBoard(lastBoardData);
+  });
 }
 
 async function stopBot(id, all) {
@@ -1002,6 +1041,7 @@ function bindBotsControls() {
   const modal = document.getElementById('botsModal');
   const closeBtn = document.getElementById('botsClose');
   const stopAllBtn = document.getElementById('botsStopAll');
+  const clearFinishedBtn = document.getElementById('botsClearFinished');
   const list = document.getElementById('botsList');
   if (!btn || btn.dataset.bound === '1') return;
   btn.dataset.bound = '1';
@@ -1012,6 +1052,7 @@ function bindBotsControls() {
 
   if (closeBtn) closeBtn.addEventListener('click', hideBotsModal);
   if (stopAllBtn) stopAllBtn.addEventListener('click', () => stopBot('', true));
+  if (clearFinishedBtn) clearFinishedBtn.addEventListener('click', () => clearFinishedBots());
   if (modal) {
     modal.addEventListener('click', (event) => {
       if (event.target === modal) hideBotsModal();
@@ -2109,11 +2150,13 @@ async function fetchData({ force = false } = {}) {
     setTickerText(nextNumber);
     handleAktenPeakChange(currentPeak);
 
-    await fetchAbsenceBadges({ force });
-    await fetchActiveKiBadges();
+    await Promise.all([
+      fetchAbsenceBadges({ force }),
+      fetchActiveKiBadges(),
+    ]);
 
-    renderBoard(cleanedRows);
     lastBoardData = cleanedRows;
+    renderBoard(cleanedRows);
     lastFetchTime = new Date();
     lastFetchError = '';
     await fetchImportStats();
@@ -2647,10 +2690,14 @@ window.addEventListener('DOMContentLoaded', () => {
     if (changed && lastBoardData.length) renderBoard(lastBoardData);
   });
   scheduleNextFetch();
-  fetchData();
+  fetchData().then(async () => {
+    await fetchActiveKiBadges();
+    if (lastBoardData.length) renderBoard(lastBoardData);
+  });
   setInterval(fetchData, FETCH_INTERVAL_MS);
   setInterval(async () => {
-    if (await fetchActiveKiBadges() && lastBoardData.length) renderBoard(lastBoardData);
+    await fetchActiveKiBadges();
+    if (lastBoardData.length) renderBoard(lastBoardData);
   }, 20_000);
   setInterval(updateTimerDisplay, 1000);
 });

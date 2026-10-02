@@ -209,10 +209,11 @@
   <div id="botsModal" class="pin-modal" hidden>
     <div class="pin-modal-dialog bots-dialog" role="dialog" aria-labelledby="botsModalTitle" aria-modal="true">
       <h2 id="botsModalTitle" class="pin-modal-title">Bots</h2>
-      <p class="badge-admin-hint">Was gerade läuft, und seit wann. Stopp beendet den Auftrag, bevor er weiter speichert.</p>
+      <p class="badge-admin-hint">Laufende und kürzlich beendete Bot-Aufträge (nur auf dem Server, kein Archiv). Stopp gilt nur für wartende/laufende Jobs.</p>
       <div id="botsList" class="bots-list" aria-live="polite"></div>
       <p id="botsError" class="pin-error" aria-live="polite"></p>
       <div class="pin-actions">
+        <button type="button" id="botsClearFinished" class="pin-btn pin-btn-secondary" hidden>Erledigte entfernen</button>
         <button type="button" id="botsStopAll" class="pin-btn pin-btn-secondary">Alle stoppen</button>
         <button type="button" id="botsClose" class="pin-btn pin-btn-primary">Schließen</button>
       </div>
@@ -229,6 +230,6 @@
     </button>
   </div>
 
-<script src="script.js?v=116"></script>
+<script src="script.js?v=118"></script>
 </body>
 </html>
