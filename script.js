@@ -401,6 +401,8 @@ function updateAdminUi() {
   if (!isAdminModeAvailable()) {
     btn.hidden = true;
     if (badgeBtn) badgeBtn.hidden = true;
+    const botsBtnEarly = document.getElementById('botsToggle');
+    if (botsBtnEarly) botsBtnEarly.hidden = true;
     adminUnlocked = false;
     return;
   }
