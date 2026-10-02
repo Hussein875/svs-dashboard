@@ -256,8 +256,16 @@ html[data-theme="dark"] .logo {
   line-height: 1;
 }
 
+.bots-header-toggle-icon {
+  font-size: 18px;
+}
+
 .badge-admin-toggle.bots-toggle-active {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.badge-admin-toggle.bots-toggle-active .bots-header-toggle-icon {
+  filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.55));
 }
 
 .bots-dialog {
