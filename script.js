@@ -372,6 +372,7 @@ let pinSubmitInFlight = false;
 let badgeSaveInFlight = false;
 const assignInFlightKeys = new Set();
 const kiWatchTimers = new Map();
+const serverKiAkten = new Set();
 function getAdminToken() {
   try {
     return sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
@@ -534,11 +535,40 @@ function parseKiSheetFlag(raw) {
 }
 
 function isKiMarkedAkte(nummer, item) {
-  if (item && typeof item.kiMarked === 'boolean') return item.kiMarked;
   const key = normalizeAkteKey(nummer);
+  if (key && serverKiAkten.has(key)) return true;
+  if (item && typeof item.kiMarked === 'boolean') return item.kiMarked;
   if (!key || !lastBoardData.length) return false;
   const row = lastBoardData.find((entry) => normalizeAkteKey(entry.Eingang) === key);
   return row ? parseKiSheetFlag(row.KiStatus) : false;
+}
+
+function syncServerKiAkten(akten) {
+  const next = new Set(
+    (Array.isArray(akten) ? akten : [])
+      .map((entry) => normalizeAkteKey(entry))
+      .filter(Boolean),
+  );
+  const prev = serverKiAkten;
+  const changed = next.size !== prev.size
+    || [...next].some((key) => !prev.has(key))
+    || [...prev].some((key) => !next.has(key));
+  serverKiAkten.clear();
+  next.forEach((key) => serverKiAkten.add(key));
+  return changed;
+}
+
+async function fetchActiveKiBadges() {
+  if (!ASSIGN_API_URL) return false;
+  try {
+    const res = await fetch(`${ASSIGN_API_URL}/api/bots/active-ki`, { cache: 'no-store' });
+    if (!res.ok) return false;
+    const data = await res.json().catch(() => ({}));
+    if (!data.ok) return false;
+    return syncServerKiAkten(data.akten);
+  } catch {
+    return false;
+  }
 }
 
 function applyOptimisticKiStatus(nummer, kiStatus) {
@@ -618,6 +648,10 @@ async function updateKiAkteOnServer(akte, action) {
       return { ok: false, error };
     }
 
+    if (akteKey) {
+      if (action === 'clear') serverKiAkten.delete(akteKey);
+      else serverKiAkten.add(akteKey);
+    }
     return { ok: true, processing: Boolean(data.processing), job: data.job || null };
   } catch (err) {
     revertOptimisticKiStatus(snapshot);
@@ -643,6 +677,7 @@ function startKiAkteProcessing(akte) {
       return;
     }
     if (card) showAssignFeedback(card, 'ok', 'Bearbeitung gestartet');
+    if (lastBoardData.length) renderBoard(lastBoardData);
     watchKiJob(nummer);
   });
 }
@@ -867,6 +902,10 @@ async function refreshBotsList() {
     }
     if (errorEl) errorEl.textContent = '';
     renderBotsList(Array.isArray(data.jobs) ? data.jobs : []);
+    const kiJobs = (Array.isArray(data.jobs) ? data.jobs : [])
+      .filter((job) => job.kind === 'ki' && ['queued', 'running', 'stopping', 'opened'].includes(job.status))
+      .map((job) => job.akte);
+    if (syncServerKiAkten(kiJobs) && lastBoardData.length) renderBoard(lastBoardData);
   } catch (err) {
     if (errorEl) errorEl.textContent = err.message || 'Netzwerkfehler';
   }
@@ -2017,6 +2056,7 @@ async function fetchData({ force = false } = {}) {
     handleAktenPeakChange(currentPeak);
 
     await fetchAbsenceBadges({ force });
+    await fetchActiveKiBadges();
 
     renderBoard(cleanedRows);
     lastBoardData = cleanedRows;
@@ -2554,5 +2594,8 @@ window.addEventListener('DOMContentLoaded', () => {
   scheduleNextFetch();
   fetchData();
   setInterval(fetchData, FETCH_INTERVAL_MS);
+  setInterval(async () => {
+    if (await fetchActiveKiBadges() && lastBoardData.length) renderBoard(lastBoardData);
+  }, 20_000);
   setInterval(updateTimerDisplay, 1000);
 });
