@@ -272,6 +272,22 @@ html[data-theme="dark"] .logo {
   width: min(460px, 100%);
 }
 
+.bots-dialog .pin-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.bots-dialog .pin-actions .pin-btn-secondary {
+  font-size: 13px;
+  padding: 9px 12px;
+}
+
+.bots-dialog .pin-actions #botsClose {
+  min-width: 7.5rem;
+}
+
 .bots-list {
   display: flex;
   flex-direction: column;
@@ -288,14 +304,23 @@ html[data-theme="dark"] .logo {
 }
 
 .bots-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
-  align-items: center;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   padding: 10px 12px;
   border: 1px solid var(--border-strong);
   border-radius: 12px;
   background: var(--bg-card);
+}
+
+.bots-row-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.bots-row-actions {
+  flex-shrink: 0;
+  padding-top: 4px;
 }
 
 .bots-kind {
@@ -312,9 +337,11 @@ html[data-theme="dark"] .logo {
 }
 
 .bots-meta {
-  margin-top: 2px;
-  font-size: 13px;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.45;
   color: var(--text-muted);
+  word-break: break-word;
 }
 
 .bots-stop {

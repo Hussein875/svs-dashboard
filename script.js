@@ -375,6 +375,13 @@ const kiWatchTimers = new Map();
 const serverKiAkten = new Set();
 const SERVER_KI_JOB_STATUSES = new Set(['queued', 'running', 'stopping', 'opened']);
 
+function assignApiErrorMessage(res, data) {
+  if (res.status === 404) {
+    return 'assign-service ist veraltet (API fehlt). Bitte auf dem Server neu deployen.';
+  }
+  return data?.error || `HTTP ${res.status}`;
+}
+
 function collectServerKiAktenFromPayload(data) {
   const list = [];
   if (Array.isArray(data?.akten)) list.push(...data.akten);
@@ -883,15 +890,34 @@ function botStatusLabel(job) {
   return job.status || '';
 }
 
+function dedupeBotsForDisplay(jobs) {
+  const byKey = new Map();
+  for (const job of jobs) {
+    const key = `${job.kind || 'ki'}|${normalizeAkteKey(job.akte)}`;
+    const prev = byKey.get(key);
+    if (!prev) {
+      byKey.set(key, job);
+      continue;
+    }
+    const prevTs = Date.parse(prev.updatedAt || '') || 0;
+    const jobTs = Date.parse(job.updatedAt || '') || 0;
+    if (jobTs >= prevTs) byKey.set(key, job);
+  }
+  return [...byKey.values()].sort(
+    (a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')),
+  );
+}
+
 function renderBotsList(jobs, { allowStop = false } = {}) {
   const list = document.getElementById('botsList');
   if (!list) return;
-  if (!jobs.length) {
+  const visible = dedupeBotsForDisplay(jobs);
+  if (!visible.length) {
     list.innerHTML = '<p class="bots-empty">Gerade läuft kein Bot.</p>';
     return;
   }
 
-  list.innerHTML = jobs.map((job) => {
+  list.innerHTML = visible.map((job) => {
     const kind = job.kind === 'zuweisen' ? 'Zuweisen' : 'KI';
     const canStop = allowStop
       && job.id
@@ -904,12 +930,12 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
       : '';
     return `
       <div class="bots-row">
-        <div>
+        <div class="bots-row-body">
           <div class="bots-kind">${kind}</div>
           <div class="bots-akte">${akte}</div>
           <div class="bots-meta">${state}${message ? ` · ${message}` : ''}</div>
         </div>
-        ${stopBtn}
+        ${stopBtn ? `<div class="bots-row-actions">${stopBtn}</div>` : ''}
       </div>
     `;
   }).join('');
@@ -952,7 +978,10 @@ async function refreshPublicBotsList() {
     const res = await fetch(`${ASSIGN_API_URL}/api/bots/active-ki`, { cache: 'no-store' });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.ok) {
-      if (errorEl) errorEl.textContent = data.error || `HTTP ${res.status}`;
+      if (errorEl) errorEl.textContent = assignApiErrorMessage(res, data);
+      if (res.status === 404) {
+        renderBotsList([], { allowStop: false });
+      }
       return;
     }
     if (errorEl) errorEl.textContent = '';
