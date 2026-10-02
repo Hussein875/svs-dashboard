@@ -427,14 +427,11 @@ function updateAdminUi() {
 
   const botsBtn = document.getElementById('botsToggle');
   if (botsBtn) {
-    if (adminUnlocked) {
-      botsBtn.hidden = false;
-      botsBtn.removeAttribute('hidden');
-    } else {
-      botsBtn.hidden = true;
-      botsBtn.setAttribute('hidden', '');
-      hideBotsModal();
-    }
+    const showBots = isAdminModeAvailable();
+    botsBtn.hidden = !showBots;
+    if (showBots) botsBtn.removeAttribute('hidden');
+    else botsBtn.setAttribute('hidden', '');
+    if (!adminUnlocked) hideBotsModal();
   }
 }
 
@@ -565,10 +562,27 @@ async function fetchActiveKiBadges() {
     if (!res.ok) return false;
     const data = await res.json().catch(() => ({}));
     if (!data.ok) return false;
-    return syncServerKiAkten(data.akten);
+    const changed = syncServerKiAkten(data.akten);
+    updateBotsToggleIndicator(Array.isArray(data.jobs) ? data.jobs : []);
+    return changed;
   } catch {
     return false;
   }
+}
+
+function countActivePublicBots(jobs) {
+  const activeStatuses = new Set(['queued', 'running', 'stopping', 'opened']);
+  return (Array.isArray(jobs) ? jobs : []).filter((job) => activeStatuses.has(job.status)).length;
+}
+
+function updateBotsToggleIndicator(jobs) {
+  const btn = document.getElementById('botsToggle');
+  if (!btn || btn.hidden) return;
+  const active = countActivePublicBots(jobs);
+  btn.title = active
+    ? `${active} Bot${active === 1 ? '' : 's'} aktiv – anzeigen`
+    : 'Laufende Bots anzeigen';
+  btn.classList.toggle('bots-toggle-active', active > 0);
 }
 
 function applyOptimisticKiStatus(nummer, kiStatus) {
@@ -855,7 +869,7 @@ function botStatusLabel(job) {
   return job.status || '';
 }
 
-function renderBotsList(jobs) {
+function renderBotsList(jobs, { allowStop = false } = {}) {
   const list = document.getElementById('botsList');
   if (!list) return;
   if (!jobs.length) {
@@ -865,10 +879,15 @@ function renderBotsList(jobs) {
 
   list.innerHTML = jobs.map((job) => {
     const kind = job.kind === 'zuweisen' ? 'Zuweisen' : 'KI';
-    const canStop = job.status === 'queued' || job.status === 'running' || job.status === 'stopping';
+    const canStop = allowStop
+      && job.id
+      && (job.status === 'queued' || job.status === 'running' || job.status === 'stopping');
     const akte = escapeHtml(job.akte || '');
     const message = escapeHtml(job.message || '');
     const state = escapeHtml(botStatusLabel(job));
+    const stopBtn = allowStop
+      ? `<button type="button" class="bots-stop" data-bot-id="${escapeHtml(job.id || '')}" ${canStop ? '' : 'disabled'}>Stopp</button>`
+      : '';
     return `
       <div class="bots-row">
         <div>
@@ -876,7 +895,7 @@ function renderBotsList(jobs) {
           <div class="bots-akte">${akte}</div>
           <div class="bots-meta">${state}${message ? ` · ${message}` : ''}</div>
         </div>
-        <button type="button" class="bots-stop" data-bot-id="${escapeHtml(job.id)}" ${canStop ? '' : 'disabled'}>Stopp</button>
+        ${stopBtn}
       </div>
     `;
   }).join('');
@@ -901,8 +920,10 @@ async function refreshBotsList() {
       return;
     }
     if (errorEl) errorEl.textContent = '';
-    renderBotsList(Array.isArray(data.jobs) ? data.jobs : []);
-    const kiJobs = (Array.isArray(data.jobs) ? data.jobs : [])
+    const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+    renderBotsList(jobs, { allowStop: true });
+    updateBotsToggleIndicator(jobs);
+    const kiJobs = jobs
       .filter((job) => job.kind === 'ki' && ['queued', 'running', 'stopping', 'opened'].includes(job.status))
       .map((job) => job.akte);
     if (syncServerKiAkten(kiJobs) && lastBoardData.length) renderBoard(lastBoardData);
@@ -911,13 +932,50 @@ async function refreshBotsList() {
   }
 }
 
+async function refreshPublicBotsList() {
+  const errorEl = document.getElementById('botsError');
+  if (!ASSIGN_API_URL) return;
+  try {
+    const res = await fetch(`${ASSIGN_API_URL}/api/bots/active-ki`, { cache: 'no-store' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      if (errorEl) errorEl.textContent = data.error || `HTTP ${res.status}`;
+      return;
+    }
+    if (errorEl) errorEl.textContent = '';
+    const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+    renderBotsList(jobs, { allowStop: false });
+    updateBotsToggleIndicator(jobs);
+    if (syncServerKiAkten(data.akten) && lastBoardData.length) renderBoard(lastBoardData);
+  } catch (err) {
+    if (errorEl) errorEl.textContent = err.message || 'Netzwerkfehler';
+  }
+}
+
+function updateBotsModalAdminActions() {
+  const stopAllBtn = document.getElementById('botsStopAll');
+  const hint = document.querySelector('#botsModal .badge-admin-hint');
+  if (stopAllBtn) stopAllBtn.hidden = !adminUnlocked;
+  if (hint) {
+    hint.textContent = adminUnlocked
+      ? 'Was gerade läuft, und seit wann. Stopp beendet den Auftrag, bevor er weiter speichert.'
+      : 'Was gerade läuft (nur Anzeige). Stoppen geht nur mit Admin-PIN.';
+  }
+}
+
+function refreshBotsModal() {
+  if (adminUnlocked) refreshBotsList();
+  else refreshPublicBotsList();
+}
+
 function showBotsModal() {
   const modal = document.getElementById('botsModal');
   if (!modal) return;
+  updateBotsModalAdminActions();
   modal.hidden = false;
-  refreshBotsList();
+  refreshBotsModal();
   if (botsPollTimer) window.clearInterval(botsPollTimer);
-  botsPollTimer = window.setInterval(refreshBotsList, 3000);
+  botsPollTimer = window.setInterval(refreshBotsModal, 3000);
 }
 
 async function stopBot(id, all) {
@@ -949,10 +1007,6 @@ function bindBotsControls() {
   btn.dataset.bound = '1';
 
   btn.addEventListener('click', () => {
-    if (!adminUnlocked) {
-      showPinModal();
-      return;
-    }
     showBotsModal();
   });
 
@@ -2142,6 +2196,7 @@ function buildBoardMap(data) {
 
   data.forEach((row) => {
     const status = row.Status.toLowerCase().trim();
+    const akteKey = normalizeAkteKey(row.Eingang);
     const akte = {
       nummer: row.Eingang,
       status,
@@ -2149,7 +2204,7 @@ function buildBoardMap(data) {
       gutachtenType: row.GutachtenType || '',
       uploader: row.Uploader || '',
       driveFolderId: row.DriveFolderId || '',
-      kiMarked: parseKiSheetFlag(row.KiStatus),
+      kiMarked: parseKiSheetFlag(row.KiStatus) || (akteKey && serverKiAkten.has(akteKey)),
     };
 
     if (isGeprueftStatus(status)) {

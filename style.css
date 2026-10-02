@@ -256,6 +256,10 @@ html[data-theme="dark"] .logo {
   line-height: 1;
 }
 
+.badge-admin-toggle.bots-toggle-active {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
 .bots-dialog {
   width: min(460px, 100%);
 }
