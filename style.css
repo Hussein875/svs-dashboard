@@ -21,7 +21,7 @@
   --person-hk: #059669;
   --person-hu: #2563eb;
   --person-mz: #0d9488;
-  --person-berlin: #dc2626;
+  --person-berlin: #7c3aed;
   --person-tolga: #6366f1;
   --person-neutral: #64748b;
 }
@@ -253,6 +253,71 @@ html[data-theme="dark"] .logo {
 .badge-admin-toggle-icon {
   font-size: 16px;
   line-height: 1;
+}
+
+.bots-dialog {
+  width: min(460px, 100%);
+}
+
+.bots-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(50vh, 360px);
+  overflow: auto;
+  margin-bottom: 12px;
+}
+
+.bots-empty {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.bots-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--bg-card);
+}
+
+.bots-kind {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.bots-akte {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.bots-meta {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.bots-stop {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bots-stop:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .badge-admin-dialog {
@@ -850,10 +915,18 @@ html[data-theme="dark"] .akte-delivery-plate {
 }
 
 .column-standorte .extern-badge {
-  width: 18px;
+  box-sizing: border-box;
+  min-width: 18px;
+  width: auto;
+  max-width: calc(100% - 10px);
   height: 18px;
+  padding: 0 4px;
   font-size: 7px;
   line-height: 18px;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .column-standorte .gutachten-type-badge,
@@ -1496,7 +1569,8 @@ html[data-theme="dark"] .akte-delivery-plate {
 
   .theme-toggle,
   .admin-toggle,
-  .badge-admin-toggle {
+  .badge-admin-toggle,
+  #botsToggle {
     width: 32px;
     height: 32px;
   }

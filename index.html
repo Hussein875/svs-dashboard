@@ -31,7 +31,7 @@
       } catch (_) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=77">
+  <link rel="stylesheet" href="style.css?v=79">
 </head>
 <body class="dashboard">
 
@@ -82,6 +82,10 @@
 
     <button type="button" id="adminToggle" class="admin-toggle" hidden aria-label="Admin entsperren" title="Admin entsperren">
       <span class="admin-toggle-icon" aria-hidden="true">🔒</span>
+    </button>
+
+    <button type="button" id="botsToggle" class="badge-admin-toggle" hidden aria-label="Laufende Bots" title="Laufende Bots">
+      <span class="badge-admin-toggle-icon" aria-hidden="true">⏹</span>
     </button>
 
     <button type="button" id="badgeAdminToggle" class="badge-admin-toggle" hidden aria-label="Spalten-Status bearbeiten" title="Spalten-Status (Urlaub/Krank)">
@@ -202,6 +206,19 @@
     </div>
   </div>
 
+  <div id="botsModal" class="pin-modal" hidden>
+    <div class="pin-modal-dialog bots-dialog" role="dialog" aria-labelledby="botsModalTitle" aria-modal="true">
+      <h2 id="botsModalTitle" class="pin-modal-title">Bots</h2>
+      <p class="badge-admin-hint">Was gerade läuft, und seit wann. Stopp beendet den Auftrag, bevor er weiter speichert.</p>
+      <div id="botsList" class="bots-list" aria-live="polite"></div>
+      <p id="botsError" class="pin-error" aria-live="polite"></p>
+      <div class="pin-actions">
+        <button type="button" id="botsStopAll" class="pin-btn pin-btn-secondary">Alle stoppen</button>
+        <button type="button" id="botsClose" class="pin-btn pin-btn-primary">Schließen</button>
+      </div>
+    </div>
+  </div>
+
   <div id="akteContextMenu" class="akte-context-menu" hidden role="menu" aria-label="Akten-Aktionen">
     <button type="button" class="akte-context-item" data-action="ki-start" role="menuitem">
       <span class="akte-context-icon" aria-hidden="true">🤖</span>
@@ -212,6 +229,6 @@
     </button>
   </div>
 
-<script src="script.js?v=113"></script>
+<script src="script.js?v=114"></script>
 </body>
 </html>

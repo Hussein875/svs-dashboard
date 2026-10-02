@@ -421,6 +421,18 @@ function updateAdminUi() {
       badgeBtn.setAttribute('hidden', '');
     }
   }
+
+  const botsBtn = document.getElementById('botsToggle');
+  if (botsBtn) {
+    if (adminUnlocked) {
+      botsBtn.hidden = false;
+      botsBtn.removeAttribute('hidden');
+    } else {
+      botsBtn.hidden = true;
+      botsBtn.setAttribute('hidden', '');
+      hideBotsModal();
+    }
+  }
 }
 
 function showPinModal() {
@@ -588,6 +600,15 @@ async function updateKiAkteOnServer(akte, action) {
       return false;
     }
 
+    if (data.skipped) {
+      revertOptimisticKiStatus(snapshot);
+      return {
+        ok: true,
+        skipped: true,
+        message: data.message || 'Akte ist schon fertig. Nichts geändert.',
+      };
+    }
+
     if (!res.ok || !data.ok) {
       revertOptimisticKiStatus(snapshot);
       const error = data.error || `HTTP ${res.status}`;
@@ -611,6 +632,10 @@ function startKiAkteProcessing(akte) {
   if (card) showAssignFeedback(card, 'pending', 'KI startet…');
 
   updateKiAkteOnServer(akte, 'start').then((result) => {
+    if (result?.skipped) {
+      if (card) showAssignFeedback(card, 'ok', result.message || 'Schon fertig, nichts geändert');
+      return;
+    }
     if (!result?.ok) {
       if (card) showAssignFeedback(card, 'error', result?.error || 'KI konnte nicht gestartet werden');
       return;
@@ -760,6 +785,150 @@ function bindCardAdminContextMenu(card, akte) {
     if (!adminUnlocked) return;
     showAkteContextMenu(event, akte);
   });
+}
+
+let botsPollTimer = null;
+
+function hideBotsModal() {
+  const modal = document.getElementById('botsModal');
+  if (modal) modal.hidden = true;
+  if (botsPollTimer) {
+    window.clearInterval(botsPollTimer);
+    botsPollTimer = null;
+  }
+}
+
+function formatBotRuntime(ms) {
+  const seconds = Math.max(0, Math.round(Number(ms) / 1000));
+  if (seconds < 60) return `seit ${seconds} s`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return rest ? `seit ${minutes} Min ${rest} s` : `seit ${minutes} Min`;
+}
+
+function botStatusLabel(job) {
+  if (job.status === 'queued') return 'wartet';
+  if (job.status === 'running') return formatBotRuntime(job.runningForMs);
+  if (job.status === 'stopping') return 'wird gestoppt';
+  if (job.status === 'stopped') return 'gestoppt';
+  if (job.status === 'skipped') return 'übersprungen';
+  if (job.status === 'error') return 'Fehler';
+  if (job.status === 'opened') return 'geöffnet';
+  if (job.status === 'done') return 'fertig';
+  return job.status || '';
+}
+
+function renderBotsList(jobs) {
+  const list = document.getElementById('botsList');
+  if (!list) return;
+  if (!jobs.length) {
+    list.innerHTML = '<p class="bots-empty">Gerade läuft kein Bot.</p>';
+    return;
+  }
+
+  list.innerHTML = jobs.map((job) => {
+    const kind = job.kind === 'zuweisen' ? 'Zuweisen' : 'KI';
+    const canStop = job.status === 'queued' || job.status === 'running' || job.status === 'stopping';
+    const akte = escapeHtml(job.akte || '');
+    const message = escapeHtml(job.message || '');
+    const state = escapeHtml(botStatusLabel(job));
+    return `
+      <div class="bots-row">
+        <div>
+          <div class="bots-kind">${kind}</div>
+          <div class="bots-akte">${akte}</div>
+          <div class="bots-meta">${state}${message ? ` · ${message}` : ''}</div>
+        </div>
+        <button type="button" class="bots-stop" data-bot-id="${escapeHtml(job.id)}" ${canStop ? '' : 'disabled'}>Stopp</button>
+      </div>
+    `;
+  }).join('');
+}
+
+async function refreshBotsList() {
+  const token = getAdminToken();
+  const errorEl = document.getElementById('botsError');
+  if (!token) return;
+  try {
+    const res = await fetch(`${ASSIGN_API_URL}/api/bots`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      lockAdmin();
+      showPinModal();
+      return;
+    }
+    if (!res.ok || !data.ok) {
+      if (errorEl) errorEl.textContent = data.error || `HTTP ${res.status}`;
+      return;
+    }
+    if (errorEl) errorEl.textContent = '';
+    renderBotsList(Array.isArray(data.jobs) ? data.jobs : []);
+  } catch (err) {
+    if (errorEl) errorEl.textContent = err.message || 'Netzwerkfehler';
+  }
+}
+
+function showBotsModal() {
+  const modal = document.getElementById('botsModal');
+  if (!modal) return;
+  modal.hidden = false;
+  refreshBotsList();
+  if (botsPollTimer) window.clearInterval(botsPollTimer);
+  botsPollTimer = window.setInterval(refreshBotsList, 3000);
+}
+
+async function stopBot(id, all) {
+  const token = getAdminToken();
+  if (!token) return;
+  const res = await fetch(`${ASSIGN_API_URL}/api/bots/stop`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(all ? { all: true } : { id }),
+  });
+  if (res.status === 401) {
+    lockAdmin();
+    showPinModal();
+    return;
+  }
+  await refreshBotsList();
+}
+
+function bindBotsControls() {
+  const btn = document.getElementById('botsToggle');
+  const modal = document.getElementById('botsModal');
+  const closeBtn = document.getElementById('botsClose');
+  const stopAllBtn = document.getElementById('botsStopAll');
+  const list = document.getElementById('botsList');
+  if (!btn || btn.dataset.bound === '1') return;
+  btn.dataset.bound = '1';
+
+  btn.addEventListener('click', () => {
+    if (!adminUnlocked) {
+      showPinModal();
+      return;
+    }
+    showBotsModal();
+  });
+
+  if (closeBtn) closeBtn.addEventListener('click', hideBotsModal);
+  if (stopAllBtn) stopAllBtn.addEventListener('click', () => stopBot('', true));
+  if (modal) {
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) hideBotsModal();
+    });
+  }
+  if (list) {
+    list.addEventListener('click', (event) => {
+      const stopBtn = event.target.closest('[data-bot-id]');
+      if (!stopBtn || stopBtn.disabled) return;
+      stopBot(stopBtn.getAttribute('data-bot-id'), false);
+    });
+  }
 }
 
 function bindAdminControls() {
@@ -2373,6 +2542,7 @@ window.addEventListener('DOMContentLoaded', () => {
   bindThemeToggle();
   bindAdminControls();
   bindBadgeAdminControls();
+  bindBotsControls();
   bindAkteContextMenuControls();
 
   ensureOpenCountWidget();
