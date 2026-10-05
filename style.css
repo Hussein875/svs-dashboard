@@ -344,6 +344,13 @@ html[data-theme="dark"] .logo {
   word-break: break-word;
 }
 
+.bots-mood {
+  display: inline-block;
+  margin-right: 2px;
+  font-size: 15px;
+  line-height: 1;
+}
+
 .bots-stop {
   border: 0;
   border-radius: 999px;

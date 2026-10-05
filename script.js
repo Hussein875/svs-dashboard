@@ -890,6 +890,68 @@ function botStatusLabel(job) {
   return job.status || '';
 }
 
+const BOT_SCHRITTE = {
+  beteiligte: 'Beteiligte',
+  besichtigung: 'Besichtigung',
+  fahrzeug: 'Fahrzeug',
+  bereifung: 'Bereifung',
+  'vor-ort': 'Vor Ort',
+  vorschaeden: 'Vorschäden',
+  schadenfeststellung: 'Schadenfeststellung',
+  'dokumente-import': 'Dokumente',
+  lichtbilder: 'Lichtbilder',
+  eingabe: 'Eingabe',
+};
+
+const BOT_SCHRITT_STATUS = {
+  laeuft: 'läuft',
+  erledigt: 'fertig',
+  offen: 'übersprungen',
+  fehler: 'Fehler',
+  wartet: 'wartet',
+};
+
+function botNachricht(message) {
+  const raw = String(message || '').trim();
+  if (!raw.startsWith('{')) return raw;
+  try {
+    const eintrag = JSON.parse(raw);
+    const schritt = BOT_SCHRITTE[eintrag?.schritt] || String(eintrag?.schritt || '').trim();
+    const status = BOT_SCHRITT_STATUS[eintrag?.status] || String(eintrag?.status || '').trim();
+    if (schritt && status) return `${schritt}: ${status}`;
+    return schritt || raw;
+  } catch {
+    return raw;
+  }
+}
+
+function botStimmung(job, text) {
+  const stand = String(job?.status || '');
+  const inhalt = String(text || '').toLowerCase();
+  if (stand === 'error' || inhalt.includes('fehlgeschlagen') || inhalt.includes('fehler')) {
+    return { zeichen: '😢', titel: 'Problem' };
+  }
+  if (stand === 'stopped' || stand === 'stopping') {
+    return { zeichen: '😐', titel: 'gestoppt' };
+  }
+  if (
+    inhalt.includes('noch offen')
+    || inhalt.includes('manuell')
+    || inhalt.includes('übersprungen')
+    || inhalt.includes('fehlt')
+    || inhalt.includes('unleserlich')
+  ) {
+    return { zeichen: '😕', titel: 'etwas fehlt' };
+  }
+  if (stand === 'opened' || stand === 'done') {
+    return { zeichen: '😄', titel: 'fertig' };
+  }
+  if (stand === 'running' || stand === 'queued') {
+    return { zeichen: '😊', titel: 'kommt klar' };
+  }
+  return { zeichen: '😐', titel: 'unbekannt' };
+}
+
 function dedupeBotsForDisplay(jobs) {
   const byKey = new Map();
   for (const job of jobs) {
@@ -923,8 +985,9 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
       && job.id
       && (job.status === 'queued' || job.status === 'running' || job.status === 'stopping');
     const akte = escapeHtml(job.akte || '');
-    const message = escapeHtml(job.message || '');
+    const message = escapeHtml(botNachricht(job.message || ''));
     const state = escapeHtml(botStatusLabel(job));
+    const stimmung = botStimmung(job, botNachricht(job.message || ''));
     const canContinue = allowStop
       && job.kind === 'ki'
       && job.akte
@@ -941,7 +1004,7 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
         <div class="bots-row-body">
           <div class="bots-kind">${kind}</div>
           <div class="bots-akte">${akte}</div>
-          <div class="bots-meta">${state}${message ? ` · ${message}` : ''}</div>
+          <div class="bots-meta"><span class="bots-mood" title="${escapeHtml(stimmung.titel)}">${stimmung.zeichen}</span> ${state}${message ? ` · ${message}` : ''}</div>
         </div>
         ${actions ? `<div class="bots-row-actions">${actions}</div>` : ''}
       </div>
