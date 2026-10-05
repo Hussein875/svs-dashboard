@@ -355,6 +355,11 @@ html[data-theme="dark"] .logo {
   cursor: pointer;
 }
 
+.bots-weiter {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
 .bots-stop:disabled {
   opacity: 0.45;
   cursor: default;

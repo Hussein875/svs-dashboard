@@ -642,7 +642,7 @@ async function updateKiAkteOnServer(akte, action) {
     return false;
   }
 
-  const kiStatus = action === 'start' ? 'ki' : '';
+  const kiStatus = action === 'clear' ? '' : 'ki';
   const snapshot = applyOptimisticKiStatus(nummer, kiStatus);
 
   try {
@@ -925,9 +925,17 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
     const akte = escapeHtml(job.akte || '');
     const message = escapeHtml(job.message || '');
     const state = escapeHtml(botStatusLabel(job));
+    const canContinue = allowStop
+      && job.kind === 'ki'
+      && job.akte
+      && (job.status === 'error' || job.status === 'opened' || job.status === 'stopped');
+    const weiterBtn = canContinue
+      ? `<button type="button" class="bots-stop bots-weiter" data-bot-weiter="${akte}" data-bot-folder="${escapeHtml(job.driveFolderId || '')}">Mach weiter</button>`
+      : '';
     const stopBtn = allowStop
       ? `<button type="button" class="bots-stop" data-bot-id="${escapeHtml(job.id || '')}" ${canStop ? '' : 'disabled'}>Stopp</button>`
       : '';
+    const actions = `${weiterBtn}${stopBtn}`;
     return `
       <div class="bots-row">
         <div class="bots-row-body">
@@ -935,7 +943,7 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
           <div class="bots-akte">${akte}</div>
           <div class="bots-meta">${state}${message ? ` · ${message}` : ''}</div>
         </div>
-        ${stopBtn ? `<div class="bots-row-actions">${stopBtn}</div>` : ''}
+        ${actions ? `<div class="bots-row-actions">${actions}</div>` : ''}
       </div>
     `;
   }).join('');
@@ -1089,11 +1097,33 @@ function bindBotsControls() {
   }
   if (list) {
     list.addEventListener('click', (event) => {
+      const weiterBtn = event.target.closest('[data-bot-weiter]');
+      if (weiterBtn) {
+        continueKiAkte(
+          weiterBtn.getAttribute('data-bot-weiter'),
+          weiterBtn.getAttribute('data-bot-folder'),
+        );
+        return;
+      }
       const stopBtn = event.target.closest('[data-bot-id]');
       if (!stopBtn || stopBtn.disabled) return;
       stopBot(stopBtn.getAttribute('data-bot-id'), false);
     });
   }
+}
+
+function continueKiAkte(nummer, driveFolderId) {
+  const akte = String(nummer || '').trim();
+  if (!akte) return;
+  updateKiAkteOnServer({ nummer: akte, driveFolderId: driveFolderId || '' }, 'weiter').then((result) => {
+    if (!result?.ok) {
+      const errorEl = document.getElementById('botsError');
+      if (errorEl) errorEl.textContent = result?.error || 'Mach weiter ist fehlgeschlagen';
+      return;
+    }
+    watchKiJob(akte);
+    refreshBotsList();
+  });
 }
 
 function bindAdminControls() {
