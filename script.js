@@ -1001,12 +1001,15 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
     const actions = `${weiterBtn}${stopBtn}`;
     return `
       <div class="bots-row">
-        <div class="bots-row-body">
-          <div class="bots-kind">${kind}</div>
-          <div class="bots-akte">${akte}</div>
-          <div class="bots-meta"><span class="bots-mood" title="${escapeHtml(stimmung.titel)}">${stimmung.zeichen}</span> ${state}${message ? ` · ${message}` : ''}</div>
+        <div class="bots-mood" title="${escapeHtml(stimmung.titel)}">${stimmung.zeichen}</div>
+        <div class="bots-row-line">
+          <div class="bots-row-body">
+            <div class="bots-kind">${kind}</div>
+            <div class="bots-akte">${akte}</div>
+            <div class="bots-meta">${state}${message ? ` · ${message}` : ''}</div>
+          </div>
+          ${actions ? `<div class="bots-row-actions">${actions}</div>` : ''}
         </div>
-        ${actions ? `<div class="bots-row-actions">${actions}</div>` : ''}
       </div>
     `;
   }).join('');
