@@ -269,7 +269,7 @@ html[data-theme="dark"] .logo {
 }
 
 .bots-dialog {
-  width: min(460px, 100%);
+  width: min(520px, 100%);
 }
 
 .bots-dialog .pin-actions {
@@ -305,19 +305,21 @@ html[data-theme="dark"] .logo {
 
 .bots-row {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  padding: 10px 12px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
   border: 1px solid var(--border-strong);
   border-radius: 12px;
   background: var(--bg-card);
 }
 
-.bots-row-line {
+.bots-leading {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
 .bots-row-body {
@@ -326,8 +328,11 @@ html[data-theme="dark"] .logo {
 }
 
 .bots-row-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   flex-shrink: 0;
-  padding-top: 4px;
 }
 
 .bots-kind {
@@ -352,21 +357,22 @@ html[data-theme="dark"] .logo {
 }
 
 .bots-mood {
-  display: block;
-  text-align: center;
-  font-size: 22px;
+  flex-shrink: 0;
+  font-size: 1.75rem;
   line-height: 1;
 }
 
 .bots-stop {
   border: 0;
   border-radius: 999px;
-  padding: 6px 10px;
+  padding: 7px 12px;
   background: #fee2e2;
   color: #991b1b;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .bots-weiter {
