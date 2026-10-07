@@ -890,7 +890,10 @@ function botStatusLabel(job) {
   return job.status || '';
 }
 
+let lastBotsJobs = [];
+
 const BOT_SCHRITTE = {
+  auftrag: 'Auftrag',
   beteiligte: 'Beteiligte',
   besichtigung: 'Besichtigung',
   fahrzeug: 'Fahrzeug',
@@ -925,6 +928,59 @@ function botNachricht(message) {
   }
 }
 
+function botBerichtLegacy(raw) {
+  const text = String(raw || '').trim();
+  if (!text.includes('Was fehlt:')) return '';
+  const [kopf, rest] = text.split('Was fehlt:');
+  const punkte = rest
+    .replace(/\.\s*$/, '')
+    .split(',')
+    .map((teil) => teil.trim())
+    .filter(Boolean)
+    .map((teil) => `• ${teil}`)
+    .join('\n');
+  return `${kopf.trim()}\nOffen:\n${punkte}`;
+}
+
+function botAnzeige(job) {
+  const raw = String(job?.message || '').trim();
+  if (!raw) return { kurz: botStatusLabel(job), bericht: '' };
+  if (raw.startsWith('{')) {
+    return { kurz: `${botStatusLabel(job)} · ${botNachricht(raw)}`, bericht: '' };
+  }
+  if (raw.includes('\n') || raw.startsWith('Akte ')) {
+    return { kurz: botStatusLabel(job), bericht: raw };
+  }
+  const legacy = botBerichtLegacy(raw);
+  if (legacy) return { kurz: botStatusLabel(job), bericht: legacy };
+  if (raw.length > 90) return { kurz: botStatusLabel(job), bericht: raw };
+  return { kurz: `${botStatusLabel(job)} · ${raw}`, bericht: '' };
+}
+
+function botKopierText(job) {
+  const kind = job?.kind === 'zuweisen' ? 'Zuweisen' : 'KI';
+  const akte = String(job?.akte || '').trim();
+  const raw = String(job?.message || '').trim();
+  const bericht = raw.includes('\n') ? raw : (botBerichtLegacy(raw) || raw);
+  const zeilen = [`${kind} · ${akte}`];
+  if (bericht) zeilen.push('', bericht);
+  return zeilen.join('\n').trim();
+}
+
+async function copyBotBericht(job, btn) {
+  const text = botKopierText(job);
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    const prev = btn.textContent;
+    btn.textContent = 'Kopiert';
+    window.setTimeout(() => { btn.textContent = prev; }, 1600);
+  } catch {
+    const errorEl = document.getElementById('botsError');
+    if (errorEl) errorEl.textContent = 'Kopieren nicht möglich (Browser-Berechtigung).';
+  }
+}
+
 function botStimmung(job, text) {
   const stand = String(job?.status || '');
   const inhalt = String(text || '').toLowerCase();
@@ -938,8 +994,10 @@ function botStimmung(job, text) {
     inhalt.includes('noch offen')
     || inhalt.includes('manuell')
     || inhalt.includes('übersprungen')
-    || inhalt.includes('fehlt')
+    ||     inhalt.includes('fehlt')
     || inhalt.includes('unleserlich')
+    || inhalt.includes('offen:')
+    || inhalt.startsWith('akte ')
   ) {
     return { zeichen: '😕', titel: 'etwas fehlt' };
   }
@@ -974,6 +1032,7 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
   const list = document.getElementById('botsList');
   if (!list) return;
   const visible = dedupeBotsForDisplay(jobs);
+  lastBotsJobs = visible;
   if (!visible.length) {
     list.innerHTML = '<p class="bots-empty">Gerade läuft kein Bot.</p>';
     return;
@@ -985,9 +1044,14 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
       && job.id
       && (job.status === 'queued' || job.status === 'running' || job.status === 'stopping');
     const akte = escapeHtml(job.akte || '');
-    const message = escapeHtml(botNachricht(job.message || ''));
-    const state = escapeHtml(botStatusLabel(job));
-    const stimmung = botStimmung(job, botNachricht(job.message || ''));
+    const anzeige = botAnzeige(job);
+    const state = escapeHtml(anzeige.kurz);
+    const bericht = anzeige.bericht ? escapeHtml(anzeige.bericht) : '';
+    const stimmung = botStimmung(job, job.message || '');
+    const jobKey = escapeHtml(`${job.kind || 'ki'}|${normalizeAkteKey(job.akte)}`);
+    const copyBtn = job.message
+      ? `<button type="button" class="bots-copy" data-bot-key="${jobKey}">Kopieren</button>`
+      : '';
     const canContinue = allowStop
       && job.kind === 'ki'
       && job.akte
@@ -998,15 +1062,16 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
     const stopBtn = allowStop
       ? `<button type="button" class="bots-stop" data-bot-id="${escapeHtml(job.id || '')}" ${canStop ? '' : 'disabled'}>Stopp</button>`
       : '';
-    const actions = `${weiterBtn}${stopBtn}`;
+    const actions = `${copyBtn}${weiterBtn}${stopBtn}`;
     return `
-      <div class="bots-row">
+      <div class="bots-row${bericht ? ' bots-row--bericht' : ''}">
         <div class="bots-leading">
           <span class="bots-mood" title="${escapeHtml(stimmung.titel)}">${stimmung.zeichen}</span>
           <div class="bots-row-body">
             <div class="bots-kind">${kind}</div>
             <div class="bots-akte">${akte}</div>
-            <div class="bots-meta">${state}${message ? ` · ${message}` : ''}</div>
+            <div class="bots-meta">${state}</div>
+            ${bericht ? `<pre class="bots-bericht">${bericht}</pre>` : ''}
           </div>
         </div>
         ${actions ? `<div class="bots-row-actions">${actions}</div>` : ''}
@@ -1163,6 +1228,13 @@ function bindBotsControls() {
   }
   if (list) {
     list.addEventListener('click', (event) => {
+      const copyBtn = event.target.closest('.bots-copy');
+      if (copyBtn) {
+        const key = copyBtn.getAttribute('data-bot-key');
+        const job = lastBotsJobs.find((eintrag) => `${eintrag.kind || 'ki'}|${normalizeAkteKey(eintrag.akte)}` === key);
+        if (job) copyBotBericht(job, copyBtn);
+        return;
+      }
       const weiterBtn = event.target.closest('[data-bot-weiter]');
       if (weiterBtn) {
         continueKiAkte(

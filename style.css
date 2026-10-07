@@ -314,6 +314,10 @@ html[data-theme="dark"] .logo {
   background: var(--bg-card);
 }
 
+.bots-row--bericht {
+  align-items: flex-start;
+}
+
 .bots-leading {
   display: flex;
   align-items: center;
@@ -354,6 +358,35 @@ html[data-theme="dark"] .logo {
   line-height: 1.45;
   color: var(--text-muted);
   word-break: break-word;
+}
+
+.bots-bericht {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-align: left;
+  background: color-mix(in srgb, var(--bg-card) 70%, var(--border-strong));
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  max-height: 14rem;
+  overflow: auto;
+}
+
+.bots-copy {
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: color-mix(in srgb, var(--bg-card) 50%, var(--border-strong));
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
 .bots-mood {
