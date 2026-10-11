@@ -15,6 +15,7 @@
   /* Einheitliche Personen-/Standort-Farben (Badge + Spalten-Akzent) */
   --person-ramazan: #8b5cf6;
   --person-robar: #06b6d4;
+  --person-jad: #10b981;
   --person-osama: #f59e0b;
   --person-hj: #e11d48;
   --person-ha: #ca8a04;
@@ -903,6 +904,7 @@ html[data-theme="dark"] .akte-delivery-plate {
 .column-standorte { --col-accent: var(--person-neutral); }
 .column-ramazan  { --col-accent: var(--person-ramazan); }
 .column-robar    { --col-accent: var(--person-robar); }
+.column-jad      { --col-accent: var(--person-jad); }
 .column-osama    { --col-accent: var(--person-osama); }
 .column-gepruft  { --col-accent: #22c55e; }
 
