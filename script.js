@@ -21,7 +21,7 @@ const TAGES_STAT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/
 const ABSENCE_BADGES_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=L2:N4`;
 
 const ADMIN_TOKEN_KEY = 'svs-assign-token';
-const ASSIGN_COLUMNS = ['Ramazan', 'Robar'];
+const ASSIGN_COLUMNS = ['Ramazan', 'Robar', 'Jad'];
 
 const DEFAULT_ASSIGN_API_URL = 'https://assign.69-62-113-32.sslip.io';
 
@@ -59,6 +59,7 @@ const columns = [
   STANDORTE_COLUMN,
   'Ramazan',
   'Robar',
+  'Jad',
   'Osama',
   'Geprüft',
 ];
@@ -119,6 +120,7 @@ const workerColumnAliases = new Map([
   ['robar', 'Robar'],
   ['robar kassem', 'Robar'],
   ['robar kassam', 'Robar'],
+  ['jad', 'Jad'],
   ['osama', 'Osama'],
   ['osama sleiman', 'Osama'],
   ['osama souleiman', 'Osama']
@@ -2420,6 +2422,7 @@ const columnClassMap = {
   [STANDORTE_COLUMN]: 'column-standorte',
   Ramazan: 'column-ramazan',
   Robar: 'column-robar',
+  Jad: 'column-jad',
   Osama: 'column-osama',
   'Geprüft': 'column-gepruft'
 };
