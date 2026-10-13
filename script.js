@@ -373,9 +373,68 @@ let akteContextMenuBound = false;
 let pinSubmitInFlight = false;
 let badgeSaveInFlight = false;
 const assignInFlightKeys = new Set();
+/** Akte → { bearbeiter, untilMs } — schützt Drag-Zuweisung vor verzögertem Sheet-Lesen */
+const recentAssignByAkte = new Map();
+const RECENT_ASSIGN_TTL_MS = 120_000;
 const kiWatchTimers = new Map();
 const serverKiAkten = new Set();
 const SERVER_KI_JOB_STATUSES = new Set(['queued', 'running', 'stopping', 'opened']);
+
+function rememberRecentAssign(akte, bearbeiter) {
+  const key = normalizeAkteKey(akte);
+  if (!key) return;
+  recentAssignByAkte.set(key, {
+    bearbeiter: String(bearbeiter || '').trim(),
+    untilMs: Date.now() + RECENT_ASSIGN_TTL_MS,
+  });
+}
+
+function clearRecentAssign(akte) {
+  const key = normalizeAkteKey(akte);
+  if (key) recentAssignByAkte.delete(key);
+}
+
+function applyRecentAssignProtection(rows) {
+  const now = Date.now();
+  for (const [key, entry] of [...recentAssignByAkte.entries()]) {
+    if (!entry || entry.untilMs <= now) {
+      recentAssignByAkte.delete(key);
+    }
+  }
+  if (!recentAssignByAkte.size) return rows;
+
+  return rows.map((row) => {
+    const key = normalizeAkteKey(row.Eingang);
+    const pending = recentAssignByAkte.get(key);
+    if (!pending) return row;
+
+    const sheetBearbeiter = String(row.Bearbeiter || '').trim();
+    const sheetColumn = resolveWorkerColumn(sheetBearbeiter);
+    const pendingColumn = resolveWorkerColumn(pending.bearbeiter)
+      || (pending.bearbeiter ? pending.bearbeiter : null);
+
+    // Sheet hat die Zuweisung übernommen → Schutz entfernen
+    if (
+      sheetBearbeiter.toLowerCase() === pending.bearbeiter.toLowerCase()
+      || (pendingColumn && sheetColumn === pendingColumn)
+    ) {
+      recentAssignByAkte.delete(key);
+      return row;
+    }
+
+    // Sonst Optimistic-Wert behalten (Sheet-Lese-Verzögerung / Import-Lag)
+    return { ...row, Bearbeiter: pending.bearbeiter };
+  });
+}
+
+function showAssignErrorBanner(message) {
+  const el = document.getElementById('updateInfo');
+  if (!el) return;
+  const text = String(message || 'Zuweisung fehlgeschlagen').trim();
+  el.textContent = `⚠ ${text}`;
+  el.classList.remove('green', 'orange');
+  el.classList.add('red');
+}
 
 function assignApiErrorMessage(res, data) {
   if (res.status === 404) {
@@ -1498,6 +1557,7 @@ async function assignAkteToColumn(akte, column, card) {
   }
 
   assignInFlightKeys.add(akteKey);
+  rememberRecentAssign(akte, columnToBearbeiter(column));
   const snapshot = applyOptimisticAssign(akte, column);
   showAssignFeedback(card, 'pending', 'Zuweisung läuft…');
 
@@ -1513,25 +1573,37 @@ async function assignAkteToColumn(akte, column, card) {
     const data = await res.json().catch(() => ({}));
 
     if (res.status === 401) {
+      clearRecentAssign(akte);
       revertOptimisticAssign(snapshot);
       lockAdmin();
       showPinModal();
       showAssignFeedback(card, 'error', 'Session abgelaufen');
+      showAssignErrorBanner('Session abgelaufen – bitte erneut entsperren');
       return;
     }
 
     if (!res.ok || (!data.ok && !data.sheetUpdated)) {
+      clearRecentAssign(akte);
       revertOptimisticAssign(snapshot);
-      showAssignFeedback(card, 'error', data.error || `HTTP ${res.status}`);
+      const errMsg = data.error || `HTTP ${res.status}`;
+      showAssignFeedback(card, 'error', errMsg);
+      showAssignErrorBanner(`Zuweisung nach ${column} fehlgeschlagen: ${errMsg}`);
       return;
     }
 
+    rememberRecentAssign(akte, columnToBearbeiter(column));
     const uxHint = data.uxPending ? ' · UX läuft…' : '';
     showAssignFeedback(card, 'ok', `${akte} → ${column}${uxHint}`);
-    fetchData({ force: true });
+    // Sheet/gviz kann kurz den alten Bearbeiter liefern — verzögert nachladen
+    window.setTimeout(() => {
+      fetchData({ force: true });
+    }, 4000);
   } catch (err) {
+    clearRecentAssign(akte);
     revertOptimisticAssign(snapshot);
-    showAssignFeedback(card, 'error', err.message || 'Netzwerkfehler');
+    const errMsg = err.message || 'Netzwerkfehler';
+    showAssignFeedback(card, 'error', errMsg);
+    showAssignErrorBanner(`Zuweisung nach ${column} fehlgeschlagen: ${errMsg}`);
   } finally {
     assignInFlightKeys.delete(akteKey);
   }
@@ -2335,7 +2407,9 @@ async function fetchData({ force = false } = {}) {
       return /\d/.test(row.Eingang);
     });
 
-    const cleanedRows = rows.filter((row) => isVisibleDashboardRow(row));
+    const cleanedRows = applyRecentAssignProtection(
+      rows.filter((row) => isVisibleDashboardRow(row)),
+    );
     setOpenCount(cleanedRows.length);
 
     const numbers = cleanedRows
