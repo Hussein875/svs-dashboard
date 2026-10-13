@@ -1588,6 +1588,11 @@ async function assignAkteToColumn(akte, column, card) {
       const errMsg = data.error || `HTTP ${res.status}`;
       showAssignFeedback(card, 'error', errMsg);
       showAssignErrorBanner(`Zuweisung nach ${column} fehlgeschlagen: ${errMsg}`);
+      try {
+        window.alert(`Zuweisung nach ${column} fehlgeschlagen:\n${errMsg}`);
+      } catch (_) {
+        /* alert blockiert / nicht verfügbar */
+      }
       return;
     }
 
