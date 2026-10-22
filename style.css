@@ -263,14 +263,6 @@ html[data-theme="dark"] .season-banner {
   animation-delay: 0.4s;
 }
 
-.season-corner-bl {
-  bottom: 68px;
-  left: 8px;
-  font-size: 48px;
-  animation: season-bob 2.4s ease-in-out infinite;
-  animation-delay: 0.8s;
-}
-
 .season-corner-br {
   bottom: 68px;
   right: 8px;
@@ -458,7 +450,6 @@ html[data-theme="dark"] .season-spider-thread {
   .season-brand-mark,
   .season-web,
   .season-spider-thread,
-  .season-corner-bl,
   .season-corner-br {
     animation: none !important;
   }
