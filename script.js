@@ -112,7 +112,7 @@ const HALLOWEEN_FALL_EMOJIS = [
   '🎃', '🦇', '👻', '🍬', '🕷️', '🕸️', '✨', '🍂', '💀', '🧙‍♀️', '🔮', '😱',
 ];
 
-function fillSeasonLayer(container, emojis, className, count) {
+function fillSeasonLayer(container, emojis, className, count, sizeBase = 16) {
   if (!container) return;
   container.textContent = '';
   for (let i = 0; i < count; i += 1) {
@@ -124,7 +124,7 @@ function fillSeasonLayer(container, emojis, className, count) {
     el.style.setProperty('--season-x', `${2 + ((i * 13) % 96)}%`);
     el.style.setProperty('--season-delay', `${(i * 0.35) % 6}s`);
     el.style.setProperty('--season-duration', `${6 + (i % 6)}s`);
-    el.style.setProperty('--season-size', `${14 + (i % 5) * 2}px`);
+    el.style.setProperty('--season-size', `${sizeBase + (i % 3) * 2}px`);
     el.style.setProperty('--season-swing', `${10 + (i % 8) * 4}px`);
     container.appendChild(el);
   }
@@ -167,8 +167,8 @@ function applySeasonDecor() {
   });
 
   if (active) {
-    fillSeasonLayer(floats, HALLOWEEN_FLOAT_EMOJIS, 'season-float', 16);
-    fillSeasonLayer(fall, HALLOWEEN_FALL_EMOJIS, 'season-fall-item', 8);
+    fillSeasonLayer(floats, HALLOWEEN_FLOAT_EMOJIS, 'season-float', 16, 16);
+    fillSeasonLayer(fall, HALLOWEEN_FALL_EMOJIS, 'season-fall-item', 8, 16);
   } else {
     if (floats) floats.textContent = '';
     if (fall) fall.textContent = '';
