@@ -26,16 +26,20 @@ const BREMEN_LON = 8.8017;
 const SUN_TIMES_URL = `https://api.open-meteo.com/v1/forecast?latitude=${BREMEN_LAT}&longitude=${BREMEN_LON}&daily=sunrise,sunset&timezone=Europe%2FBerlin&forecast_days=1`;
 const SUN_TIMES_REFRESH_MS = 60 * 60_000;
 
-function isHalloweenSeason(date = new Date()) {
+const HALLOWEEN_PREF_KEY = 'svs-dashboard-halloween-enabled';
+
+function readHalloweenUrlForce() {
   try {
-    const params = new URLSearchParams(window.location.search);
-    const force = params.get('halloween');
-    if (force === '1' || force === 'true') return true;
-    if (force === '0' || force === 'false') return false;
+    const force = new URLSearchParams(window.location.search).get('halloween');
+    if (force === '1' || force === 'true') return 'on';
+    if (force === '0' || force === 'false') return 'off';
   } catch (_) {
     /* optional */
   }
+  return null;
+}
 
+function isHalloweenSeasonWindow(date = new Date()) {
   try {
     const parts = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Europe/Berlin',
@@ -50,6 +54,54 @@ function isHalloweenSeason(date = new Date()) {
     const day = date.getDate();
     return month === 10 && day >= 1 && day <= 31;
   }
+}
+
+function isHalloweenSeasonAvailable(date = new Date()) {
+  const force = readHalloweenUrlForce();
+  if (force === 'on') return true;
+  if (force === 'off') return false;
+  return isHalloweenSeasonWindow(date);
+}
+
+function readHalloweenPrefEnabled() {
+  try {
+    const saved = localStorage.getItem(HALLOWEEN_PREF_KEY);
+    if (saved === '0') return false;
+    if (saved === '1') return true;
+  } catch (_) {
+    /* private mode */
+  }
+  try {
+    const saved = sessionStorage.getItem(HALLOWEEN_PREF_KEY);
+    if (saved === '0') return false;
+    if (saved === '1') return true;
+  } catch (_) {
+    /* optional */
+  }
+  return true;
+}
+
+function storeHalloweenPrefEnabled(enabled) {
+  const value = enabled ? '1' : '0';
+  try {
+    localStorage.setItem(HALLOWEEN_PREF_KEY, value);
+  } catch (_) {
+    /* private mode */
+  }
+  try {
+    sessionStorage.setItem(HALLOWEEN_PREF_KEY, value);
+  } catch (_) {
+    /* optional */
+  }
+}
+
+function isHalloweenDecorActive(date = new Date()) {
+  if (!isHalloweenSeasonAvailable(date)) return false;
+  return readHalloweenPrefEnabled();
+}
+
+function isHalloweenSeason(date = new Date()) {
+  return isHalloweenDecorActive(date);
 }
 
 const HALLOWEEN_FLOAT_EMOJIS = [
@@ -78,8 +130,26 @@ function fillSeasonLayer(container, emojis, className, count) {
   }
 }
 
-function initSeasonDecor() {
-  const active = isHalloweenSeason();
+function updateHalloweenToggleButton(available, active) {
+  const btn = document.getElementById('halloweenToggle');
+  if (!btn) return;
+
+  const show = available && !isKioskMode();
+  btn.hidden = !show;
+  if (!show) return;
+
+  btn.classList.toggle('is-off', !active);
+  btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  btn.title = active ? 'Halloween-Deko ausblenden' : 'Halloween-Deko einblenden';
+  btn.setAttribute(
+    'aria-label',
+    active ? 'Halloween-Deko ausblenden' : 'Halloween-Deko einblenden',
+  );
+}
+
+function applySeasonDecor() {
+  const available = isHalloweenSeasonAvailable();
+  const active = isHalloweenDecorActive();
   const decor = document.getElementById('seasonDecor');
   const banner = document.getElementById('seasonBanner');
   const brandMark = document.getElementById('seasonBrandMark');
@@ -103,6 +173,29 @@ function initSeasonDecor() {
     if (floats) floats.textContent = '';
     if (fall) fall.textContent = '';
   }
+
+  updateHalloweenToggleButton(available, active);
+}
+
+function initSeasonDecor() {
+  applySeasonDecor();
+}
+
+function toggleHalloweenDecor() {
+  if (!isHalloweenSeasonAvailable()) return;
+  const next = !isHalloweenDecorActive();
+  storeHalloweenPrefEnabled(next);
+  applySeasonDecor();
+}
+
+function bindHalloweenToggle() {
+  const btn = document.getElementById('halloweenToggle');
+  if (!btn || btn.dataset.bound === '1') return;
+  btn.dataset.bound = '1';
+  btn.addEventListener('click', (event) => {
+    event.preventDefault();
+    toggleHalloweenDecor();
+  });
 }
 
 const ADMIN_TOKEN_KEY = 'svs-assign-token';
@@ -3030,6 +3123,9 @@ function initKioskMode() {
   const themeBtn = document.getElementById('themeToggle');
   if (themeBtn) themeBtn.hidden = true;
 
+  const halloweenBtn = document.getElementById('halloweenToggle');
+  if (halloweenBtn) halloweenBtn.hidden = true;
+
   const adminBtn = document.getElementById('adminToggle');
   if (adminBtn) adminBtn.hidden = true;
 
@@ -3074,6 +3170,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initSeasonDecor();
   bindThemeToggle();
+  bindHalloweenToggle();
   bindAdminControls();
   bindBadgeAdminControls();
   bindBotsControls();

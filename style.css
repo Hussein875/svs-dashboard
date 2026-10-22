@@ -595,6 +595,18 @@ html[data-theme="dark"] .logo {
   line-height: 1;
 }
 
+.halloween-toggle.is-off {
+  opacity: 0.55;
+}
+
+.halloween-toggle.is-off .halloween-toggle-icon {
+  filter: grayscale(1);
+}
+
+.halloween-toggle[hidden] {
+  display: none !important;
+}
+
 .admin-toggle {
   position: relative;
   z-index: 101;
@@ -2144,6 +2156,7 @@ html[data-theme="dark"] .akte-delivery-plate {
   .logo { height: 28px; }
 
   .theme-toggle,
+  .halloween-toggle,
   .admin-toggle,
   .badge-admin-toggle,
   #botsToggle {
@@ -2152,6 +2165,7 @@ html[data-theme="dark"] .akte-delivery-plate {
   }
 
   .theme-toggle-icon,
+  .halloween-toggle-icon,
   .admin-toggle-icon,
   .badge-admin-toggle-icon {
     font-size: 15px;
@@ -2291,7 +2305,8 @@ html[data-theme="dark"] .akte-delivery-plate {
 }
 
 /* ── Kiosk-Modus (?kiosk=1) — TV / Raspberry Pi ─────────── */
-html[data-kiosk="1"] .theme-toggle {
+html[data-kiosk="1"] .theme-toggle,
+html[data-kiosk="1"] .halloween-toggle {
   display: none !important;
 }
 
