@@ -288,40 +288,47 @@ html[data-theme="dark"] .season-banner {
   align-items: center;
   width: 1.5em;
   transform: translate3d(-50%, 0, 0);
-  animation: season-spider-climb 7.5s ease-in-out infinite;
-  will-change: transform;
 }
 
 .season-spider-rig-left {
   left: 58%;
-  animation-delay: 0.2s;
 }
 
 .season-spider-rig-right {
   left: 42%;
-  animation-name: season-spider-climb-alt;
-  animation-delay: 1.6s;
-  animation-duration: 8.5s;
 }
 
 .season-spider-thread {
   display: block;
   width: 1.5px;
-  height: 18px;
+  height: 14px;
   margin-bottom: -2px;
   border-radius: 1px;
+  transform-origin: top center;
   background: linear-gradient(
     180deg,
-    rgba(120, 113, 108, 0.15),
-    rgba(68, 64, 60, 0.55)
+    rgba(120, 113, 108, 0.12),
+    rgba(68, 64, 60, 0.58)
   );
+  animation: season-spider-thread 7.5s ease-in-out infinite;
+  will-change: height;
+}
+
+.season-spider-rig-left .season-spider-thread {
+  animation-delay: 0.2s;
+}
+
+.season-spider-rig-right .season-spider-thread {
+  animation-name: season-spider-thread-alt;
+  animation-delay: 1.6s;
+  animation-duration: 8.5s;
 }
 
 html[data-theme="dark"] .season-spider-thread {
   background: linear-gradient(
     180deg,
     rgba(214, 211, 209, 0.08),
-    rgba(214, 211, 209, 0.45)
+    rgba(214, 211, 209, 0.5)
   );
 }
 
@@ -332,16 +339,16 @@ html[data-theme="dark"] .season-spider-thread {
   filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
 }
 
-@keyframes season-spider-climb {
-  0%, 12% { transform: translate3d(-50%, 0, 0); }
-  48%, 58% { transform: translate3d(-50%, 110px, 0); }
-  92%, 100% { transform: translate3d(-50%, 0, 0); }
+@keyframes season-spider-thread {
+  0%, 12% { height: 14px; }
+  48%, 58% { height: 124px; }
+  92%, 100% { height: 14px; }
 }
 
-@keyframes season-spider-climb-alt {
-  0%, 18% { transform: translate3d(-50%, 0, 0); }
-  52%, 62% { transform: translate3d(-50%, 95px, 0); }
-  94%, 100% { transform: translate3d(-50%, 0, 0); }
+@keyframes season-spider-thread-alt {
+  0%, 18% { height: 14px; }
+  52%, 62% { height: 108px; }
+  94%, 100% { height: 14px; }
 }
 
 .season-floats,
@@ -450,7 +457,7 @@ html[data-theme="dark"] .season-spider-thread {
   .season-fall-item,
   .season-brand-mark,
   .season-web,
-  .season-spider-rig,
+  .season-spider-thread,
   .season-corner-bl,
   .season-corner-br {
     animation: none !important;
@@ -526,16 +533,16 @@ html[data-season="halloween"] .column-header {
     top: 32px;
   }
 
-  @keyframes season-spider-climb {
-    0%, 12% { transform: translate3d(-50%, 0, 0); }
-    48%, 58% { transform: translate3d(-50%, 72px, 0); }
-    92%, 100% { transform: translate3d(-50%, 0, 0); }
+  @keyframes season-spider-thread {
+    0%, 12% { height: 12px; }
+    48%, 58% { height: 84px; }
+    92%, 100% { height: 12px; }
   }
 
-  @keyframes season-spider-climb-alt {
-    0%, 18% { transform: translate3d(-50%, 0, 0); }
-    52%, 62% { transform: translate3d(-50%, 64px, 0); }
-    94%, 100% { transform: translate3d(-50%, 0, 0); }
+  @keyframes season-spider-thread-alt {
+    0%, 18% { height: 12px; }
+    52%, 62% { height: 74px; }
+    94%, 100% { height: 12px; }
   }
 }
 
