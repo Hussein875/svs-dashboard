@@ -20,6 +20,12 @@ const IMPORT_RUN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/
 const TAGES_STAT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=H2:K`;
 const ABSENCE_BADGES_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=L2:N4`;
 
+// Tageslicht Bremen (Termine bei Sonnenlicht)
+const BREMEN_LAT = 53.0793;
+const BREMEN_LON = 8.8017;
+const SUN_TIMES_URL = `https://api.open-meteo.com/v1/forecast?latitude=${BREMEN_LAT}&longitude=${BREMEN_LON}&daily=sunrise,sunset&timezone=Europe%2FBerlin&forecast_days=1`;
+const SUN_TIMES_REFRESH_MS = 60 * 60_000;
+
 const ADMIN_TOKEN_KEY = 'svs-assign-token';
 const ASSIGN_COLUMNS = ['Ramazan', 'Robar'];
 
@@ -2452,6 +2458,41 @@ async function fetchData({ force = false } = {}) {
   }
 }
 
+function formatSunClock(isoLocal) {
+  const match = String(isoLocal || '').match(/T(\d{2}):(\d{2})/);
+  return match ? `${match[1]}:${match[2]}` : '–';
+}
+
+function renderSunTimes(sunriseIso, sunsetIso) {
+  const el = document.getElementById('sunTimesValue');
+  if (!el) return;
+  const rise = formatSunClock(sunriseIso);
+  const set = formatSunClock(sunsetIso);
+  el.textContent = `☀ ${rise} · ☾ ${set}`;
+  const widget = document.getElementById('sunTimesWidget');
+  if (widget) {
+    widget.title = `Tageslicht Bremen – Aufgang ${rise}, Untergang ${set}`;
+  }
+}
+
+async function fetchSunTimes() {
+  try {
+    const res = await fetch(SUN_TIMES_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const sunrise = data?.daily?.sunrise?.[0];
+    const sunset = data?.daily?.sunset?.[0];
+    if (!sunrise || !sunset) throw new Error('Keine Sonnenzeiten');
+    renderSunTimes(sunrise, sunset);
+  } catch (err) {
+    console.warn('fetchSunTimes() Fehler:', err);
+    const el = document.getElementById('sunTimesValue');
+    if (el && el.textContent.includes('–')) {
+      el.textContent = '☀ – · ☾ –';
+    }
+  }
+}
+
 function updateTimerDisplay() {
   const el = document.getElementById('updateInfo');
   if (!el) return;
@@ -2976,4 +3017,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (lastBoardData.length) renderBoard(lastBoardData);
   }, 20_000);
   setInterval(updateTimerDisplay, 1000);
+  fetchSunTimes();
+  setInterval(fetchSunTimes, SUN_TIMES_REFRESH_MS);
 });
