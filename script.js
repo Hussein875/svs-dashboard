@@ -97,8 +97,8 @@ function initSeasonDecor() {
   });
 
   if (active) {
-    fillSeasonLayer(floats, HALLOWEEN_FLOAT_EMOJIS, 'season-float', 28);
-    fillSeasonLayer(fall, HALLOWEEN_FALL_EMOJIS, 'season-fall-item', 36);
+    fillSeasonLayer(floats, HALLOWEEN_FLOAT_EMOJIS, 'season-float', 16);
+    fillSeasonLayer(fall, HALLOWEEN_FALL_EMOJIS, 'season-fall-item', 8);
   } else {
     if (floats) floats.textContent = '';
     if (fall) fall.textContent = '';

@@ -286,11 +286,11 @@ html[data-theme="dark"] .season-banner {
   position: absolute;
   top: -40px;
   left: var(--season-x);
-  font-size: var(--season-size, 24px);
+  font-size: var(--season-size, 20px);
   line-height: 1;
-  opacity: 0.85;
-  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.2));
-  animation: season-fall var(--season-duration, 8s) linear infinite;
+  opacity: 0.45;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.14));
+  animation: season-fall var(--season-duration, 11s) linear infinite;
   animation-delay: var(--season-delay, 0s);
   will-change: transform;
 }
