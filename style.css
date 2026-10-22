@@ -521,6 +521,22 @@ html[data-season="halloween"] .column-header {
   .season-corner-br {
     font-size: 32px;
   }
+
+  .season-spider-rig {
+    top: 32px;
+  }
+
+  @keyframes season-spider-climb {
+    0%, 12% { transform: translate3d(-50%, 0, 0); }
+    48%, 58% { transform: translate3d(-50%, 72px, 0); }
+    92%, 100% { transform: translate3d(-50%, 0, 0); }
+  }
+
+  @keyframes season-spider-climb-alt {
+    0%, 18% { transform: translate3d(-50%, 0, 0); }
+    52%, 62% { transform: translate3d(-50%, 64px, 0); }
+    94%, 100% { transform: translate3d(-50%, 0, 0); }
+  }
 }
 
 @media (max-width: 600px) {
