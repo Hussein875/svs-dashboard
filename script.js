@@ -26,6 +26,50 @@ const BREMEN_LON = 8.8017;
 const SUN_TIMES_URL = `https://api.open-meteo.com/v1/forecast?latitude=${BREMEN_LAT}&longitude=${BREMEN_LON}&daily=sunrise,sunset&timezone=Europe%2FBerlin&forecast_days=1`;
 const SUN_TIMES_REFRESH_MS = 60 * 60_000;
 
+function isHalloweenSeason(date = new Date()) {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const force = params.get('halloween');
+    if (force === '1' || force === 'true') return true;
+    if (force === '0' || force === 'false') return false;
+  } catch (_) {
+    /* optional */
+  }
+
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Berlin',
+      month: 'numeric',
+      day: 'numeric',
+    }).formatToParts(date);
+    const month = Number(parts.find((part) => part.type === 'month')?.value);
+    const day = Number(parts.find((part) => part.type === 'day')?.value);
+    return month === 10 && day >= 1 && day <= 31;
+  } catch (_) {
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return month === 10 && day >= 1 && day <= 31;
+  }
+}
+
+function initSeasonDecor() {
+  const active = isHalloweenSeason();
+  const decor = document.getElementById('seasonDecor');
+  const brandMark = document.getElementById('seasonBrandMark');
+
+  document.documentElement.setAttribute('data-season', active ? 'halloween' : '');
+  if (!active) document.documentElement.removeAttribute('data-season');
+
+  if (decor) {
+    decor.hidden = !active;
+    decor.setAttribute('aria-hidden', active ? 'false' : 'true');
+  }
+  if (brandMark) {
+    brandMark.hidden = !active;
+    brandMark.setAttribute('aria-hidden', active ? 'false' : 'true');
+  }
+}
+
 const ADMIN_TOKEN_KEY = 'svs-assign-token';
 const ASSIGN_COLUMNS = ['Ramazan', 'Robar'];
 
@@ -2993,6 +3037,7 @@ async function requestWakeLock() {
 window.addEventListener('DOMContentLoaded', () => {
   initKioskMode();
   initTheme();
+  initSeasonDecor();
   bindThemeToggle();
   bindAdminControls();
   bindBadgeAdminControls();
