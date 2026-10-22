@@ -31,7 +31,7 @@
       } catch (_) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=92">
+  <link rel="stylesheet" href="style.css?v=93">
 </head>
 <body class="dashboard">
 
@@ -55,6 +55,18 @@
         <span class="next-akte-label">Nächste Nr.</span>
         <span class="next-akte-divider" aria-hidden="true"></span>
         <span class="next-akte-number" id="naechsteNummer">–</span>
+      </div>
+
+      <div
+        class="sun-times-banner"
+        id="sunTimesWidget"
+        aria-live="polite"
+        aria-label="Sonnenzeiten Bremen"
+        title="Sonnenzeiten Bremen – Termine bei Tageslicht"
+      >
+        <span class="sun-times-label">Sonne Bremen</span>
+        <span class="sun-times-divider" aria-hidden="true"></span>
+        <span class="sun-times-value" id="sunTimesValue">☀ – · ☾ –</span>
       </div>
 
       <!-- Archiv: Auto-Lieferung (für spätere Nutzung) -->
@@ -125,10 +137,6 @@
       <div class="stat-cell stat-cell-open state-green" id="openCountWidget" aria-label="Offene Akten">
         <span class="stat-label">Offene Akten</span>
         <span class="stat-value value">0</span>
-      </div>
-      <div class="stat-cell stat-cell-sun" id="sunTimesWidget" aria-label="Sonnenzeiten Bremen" title="Tageslicht in Bremen – Termine bei Licht">
-        <span class="stat-label">Licht Bremen</span>
-        <span class="stat-value stat-value-sun" id="sunTimesValue">☀ – · ☾ –</span>
       </div>
       <div class="stat-cell stat-cell-sync" id="syncStatCell" title="Fehlt eine Drive-Akte im Dashboard?">
         <span class="stat-label">Sync</span>
@@ -234,6 +242,6 @@
     </button>
   </div>
 
-<script src="script.js?v=130"></script>
+<script src="script.js?v=131"></script>
 </body>
 </html>

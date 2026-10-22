@@ -2471,7 +2471,7 @@ function renderSunTimes(sunriseIso, sunsetIso) {
   el.textContent = `☀ ${rise} · ☾ ${set}`;
   const widget = document.getElementById('sunTimesWidget');
   if (widget) {
-    widget.title = `Tageslicht Bremen – Aufgang ${rise}, Untergang ${set}`;
+    widget.title = `Sonne Bremen – Aufgang ${rise}, Untergang ${set}`;
   }
 }
 

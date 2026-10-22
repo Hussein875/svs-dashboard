@@ -495,6 +495,7 @@ html[data-kiosk="1"] .badge-admin-toggle {
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 10px;
 }
 
 .next-akte-banner {
@@ -508,6 +509,50 @@ html[data-kiosk="1"] .badge-admin-toggle {
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow);
   white-space: nowrap;
+}
+
+.sun-times-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 7px 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  white-space: nowrap;
+}
+
+.sun-times-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  line-height: 1.2;
+}
+
+.sun-times-divider {
+  flex-shrink: 0;
+  width: 1px;
+  height: 28px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    var(--border-strong) 18%,
+    var(--border-strong) 82%,
+    transparent
+  );
+}
+
+.sun-times-value {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  line-height: 1;
 }
 
 .next-akte-car {
@@ -1376,7 +1421,7 @@ html[data-theme="dark"] .akte-delivery-plate {
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
-  width: min(820px, calc(100% - 32px));
+  width: min(680px, calc(100% - 32px));
   pointer-events: none;
 }
 
@@ -1436,19 +1481,6 @@ html[data-theme="dark"] .akte-delivery-plate {
 
 .stat-cell-starg {
   min-width: 108px;
-}
-
-.stat-cell-sun {
-  min-width: 118px;
-  padding-left: 12px;
-  padding-right: 12px;
-}
-
-.stat-value-sun {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  white-space: nowrap;
 }
 
 #stargCountWidget.state-yellow .stat-value { color: #fbbf24; }
@@ -1566,6 +1598,15 @@ html[data-theme="dark"] .akte-delivery-plate {
   .next-akte-label { font-size: 8px; letter-spacing: 0.05em; }
   .next-akte-divider { height: 22px; }
   .next-akte-number { font-size: 20px; padding: 3px 9px; min-width: 2.8ch; }
+
+  .sun-times-banner {
+    gap: 7px;
+    padding: 5px 10px;
+  }
+
+  .sun-times-label { font-size: 8px; letter-spacing: 0.05em; }
+  .sun-times-divider { height: 22px; }
+  .sun-times-value { font-size: 12px; }
 
   .akte-delivery-number { font-size: 18px; }
   .akte-delivery-svg { width: 104px; }
@@ -1792,6 +1833,20 @@ html[data-theme="dark"] .akte-delivery-plate {
     font-size: 16px;
     padding: 2px 6px;
   }
+
+  .sun-times-label,
+  .sun-times-divider {
+    display: none;
+  }
+
+  .sun-times-banner {
+    gap: 0;
+    padding: 3px 8px;
+  }
+
+  .sun-times-value {
+    font-size: 11px;
+  }
 }
 
 @media (max-width: 380px) {
@@ -1873,6 +1928,14 @@ html[data-kiosk="1"] .next-akte-number {
   padding: 6px 14px;
 }
 
+html[data-kiosk="1"] .sun-times-label {
+  font-size: 12px;
+}
+
+html[data-kiosk="1"] .sun-times-value {
+  font-size: 17px;
+}
+
 html[data-kiosk="1"] .akte-delivery-number {
   font-size: 28px;
 }
@@ -1942,7 +2005,7 @@ html[data-kiosk="1"] .logo {
   }
 
   html[data-kiosk="1"] .app-footer {
-    width: min(820px, calc(100% - 32px));
+    width: min(680px, calc(100% - 32px));
     bottom: 14px;
   }
 
