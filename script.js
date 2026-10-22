@@ -72,7 +72,7 @@ function fillSeasonLayer(container, emojis, className, count) {
     el.style.setProperty('--season-x', `${2 + ((i * 13) % 96)}%`);
     el.style.setProperty('--season-delay', `${(i * 0.35) % 6}s`);
     el.style.setProperty('--season-duration', `${6 + (i % 6)}s`);
-    el.style.setProperty('--season-size', `${22 + (i % 6) * 5}px`);
+    el.style.setProperty('--season-size', `${14 + (i % 5) * 2}px`);
     el.style.setProperty('--season-swing', `${10 + (i % 8) * 4}px`);
     container.appendChild(el);
   }

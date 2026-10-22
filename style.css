@@ -258,13 +258,13 @@ html[data-theme="dark"] .season-banner {
 
 .season-float {
   position: absolute;
-  top: calc(10% + (var(--season-i) * 2.8%));
+  top: calc(10% + (var(--season-i) * 4.5%));
   left: var(--season-x);
-  font-size: var(--season-size, 26px);
+  font-size: var(--season-size, 16px);
   line-height: 1;
-  opacity: 0.88;
-  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.22));
-  animation: season-drift-a var(--season-duration, 8s) ease-in-out infinite;
+  opacity: 0.58;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.16));
+  animation: season-drift-a var(--season-duration, 10s) ease-in-out infinite;
   animation-delay: var(--season-delay, 0s);
   will-change: transform;
 }
@@ -275,7 +275,7 @@ html[data-theme="dark"] .season-banner {
 
 .season-float:nth-child(3n) {
   animation-name: season-drift-c;
-  opacity: 0.95;
+  opacity: 0.65;
 }
 
 .season-float:nth-child(4n) {
@@ -301,22 +301,22 @@ html[data-theme="dark"] .season-banner {
 
 @keyframes season-drift-a {
   0%, 100% { transform: translate3d(0, 0, 0) rotate(-10deg) scale(1); }
-  50% { transform: translate3d(var(--season-swing, 18px), -28px, 0) rotate(14deg) scale(1.15); }
+  50% { transform: translate3d(var(--season-swing, 18px), -28px, 0) rotate(14deg) scale(1.06); }
 }
 
 @keyframes season-drift-b {
   0%, 100% { transform: translate3d(0, 0, 0) rotate(8deg) scale(1); }
-  50% { transform: translate3d(calc(var(--season-swing, 18px) * -1), 22px, 0) rotate(-16deg) scale(1.12); }
+  50% { transform: translate3d(calc(var(--season-swing, 18px) * -1), 22px, 0) rotate(-16deg) scale(1.05); }
 }
 
 @keyframes season-drift-c {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(16px, -20px, 0) scale(1.22); }
+  50% { transform: translate3d(16px, -20px, 0) scale(1.08); }
 }
 
 @keyframes season-spin-drift {
   0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
-  50% { transform: translate3d(-12px, -24px, 0) rotate(180deg) scale(1.18); }
+  50% { transform: translate3d(-12px, -24px, 0) rotate(180deg) scale(1.06); }
   100% { transform: translate3d(0, 0, 0) rotate(360deg) scale(1); }
 }
 
