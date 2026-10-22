@@ -31,7 +31,7 @@
       } catch (_) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=93">
+  <link rel="stylesheet" href="style.css?v=94">
 </head>
 <body class="dashboard">
 
@@ -40,8 +40,10 @@
       <img src="Logo.png" alt="SV-Souleiman Logo" class="logo" />
     </div>
 
-    <div class="header-main">
-      <div class="next-akte-banner" aria-live="polite" aria-label="Nächste Nr.">
+    <div class="header-main" id="sunTimesWidget" aria-live="polite">
+      <div class="sun-time sun-time-rise" id="sunriseValue" title="Sonnenaufgang Bremen">☀ –</div>
+
+      <div class="next-akte-banner" aria-label="Nächste Nr.">
         <svg class="next-akte-car" id="nextAkteCar" viewBox="0 0 128 52" aria-hidden="true" focusable="false">
           <ellipse cx="34" cy="44" rx="10" ry="10" fill="#0f172a"/>
           <ellipse cx="34" cy="44" rx="5" ry="5" fill="#94a3b8"/>
@@ -57,17 +59,7 @@
         <span class="next-akte-number" id="naechsteNummer">–</span>
       </div>
 
-      <div
-        class="sun-times-banner"
-        id="sunTimesWidget"
-        aria-live="polite"
-        aria-label="Sonnenzeiten Bremen"
-        title="Sonnenzeiten Bremen – Termine bei Tageslicht"
-      >
-        <span class="sun-times-label">Sonne Bremen</span>
-        <span class="sun-times-divider" aria-hidden="true"></span>
-        <span class="sun-times-value" id="sunTimesValue">☀ – · ☾ –</span>
-      </div>
+      <div class="sun-time sun-time-set" id="sunsetValue" title="Sonnenuntergang Bremen">☾ –</div>
 
       <!-- Archiv: Auto-Lieferung (für spätere Nutzung) -->
       <div class="akte-delivery akte-delivery--archived" hidden aria-hidden="true">
@@ -242,6 +234,6 @@
     </button>
   </div>
 
-<script src="script.js?v=131"></script>
+<script src="script.js?v=132"></script>
 </body>
 </html>

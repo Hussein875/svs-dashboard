@@ -2464,14 +2464,17 @@ function formatSunClock(isoLocal) {
 }
 
 function renderSunTimes(sunriseIso, sunsetIso) {
-  const el = document.getElementById('sunTimesValue');
-  if (!el) return;
+  const riseEl = document.getElementById('sunriseValue');
+  const setEl = document.getElementById('sunsetValue');
   const rise = formatSunClock(sunriseIso);
   const set = formatSunClock(sunsetIso);
-  el.textContent = `☀ ${rise} · ☾ ${set}`;
-  const widget = document.getElementById('sunTimesWidget');
-  if (widget) {
-    widget.title = `Sonne Bremen – Aufgang ${rise}, Untergang ${set}`;
+  if (riseEl) {
+    riseEl.textContent = `☀ ${rise}`;
+    riseEl.title = `Sonnenaufgang Bremen ${rise}`;
+  }
+  if (setEl) {
+    setEl.textContent = `☾ ${set}`;
+    setEl.title = `Sonnenuntergang Bremen ${set}`;
   }
 }
 
@@ -2486,10 +2489,6 @@ async function fetchSunTimes() {
     renderSunTimes(sunrise, sunset);
   } catch (err) {
     console.warn('fetchSunTimes() Fehler:', err);
-    const el = document.getElementById('sunTimesValue');
-    if (el && el.textContent.includes('–')) {
-      el.textContent = '☀ – · ☾ –';
-    }
   }
 }
 
