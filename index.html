@@ -31,22 +31,34 @@
       } catch (_) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=96">
+  <link rel="stylesheet" href="style.css?v=97">
 </head>
 <body class="dashboard">
 
   <div class="season-decor" id="seasonDecor" hidden aria-hidden="true">
-    <span class="season-float season-float-a" aria-hidden="true">🎃</span>
-    <span class="season-float season-float-b" aria-hidden="true">🦇</span>
-    <span class="season-float season-float-c" aria-hidden="true">👻</span>
-    <span class="season-float season-float-d" aria-hidden="true">🕷️</span>
-    <span class="season-float season-float-e" aria-hidden="true">🍬</span>
+    <div class="season-corner season-corner-tl" aria-hidden="true">🕸️</div>
+    <div class="season-corner season-corner-tr" aria-hidden="true">🕸️</div>
+    <div class="season-corner season-corner-bl" aria-hidden="true">🎃</div>
+    <div class="season-corner season-corner-br" aria-hidden="true">🎃</div>
+    <div class="season-floats" id="seasonFloats" aria-hidden="true"></div>
+    <div class="season-fall" id="seasonFall" aria-hidden="true"></div>
+  </div>
+
+  <div class="season-banner" id="seasonBanner" hidden aria-hidden="true">
+    <span aria-hidden="true">🦇</span>
+    <span>Happy Halloween</span>
+    <span aria-hidden="true">🎃</span>
+    <span aria-hidden="true">👻</span>
+    <span aria-hidden="true">🕷️</span>
+    <span aria-hidden="true">🍬</span>
+    <span aria-hidden="true">🦇</span>
   </div>
 
   <header class="app-header">
     <div class="brand">
       <img src="Logo.png" alt="SV-Souleiman Logo" class="logo" />
       <span class="season-brand-mark" id="seasonBrandMark" hidden aria-hidden="true">🎃</span>
+      <span class="season-brand-mark season-brand-mark-bat" id="seasonBrandBat" hidden aria-hidden="true">🦇</span>
     </div>
 
     <div class="header-main" id="sunTimesWidget" aria-live="polite">
@@ -249,6 +261,6 @@
     </button>
   </div>
 
-<script src="script.js?v=134"></script>
+<script src="script.js?v=135"></script>
 </body>
 </html>

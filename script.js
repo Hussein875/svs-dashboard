@@ -52,21 +52,50 @@ function isHalloweenSeason(date = new Date()) {
   }
 }
 
+const HALLOWEEN_FLOAT_EMOJIS = ['🎃', '🦇', '👻', '🕷️', '🍬', '🕸️', '🧙‍♀️', '🧹', '🧛', '💀', '🎃', '🦇'];
+const HALLOWEEN_FALL_EMOJIS = ['🎃', '🦇', '👻', '🍬', '🕷️', '🕸️', '✨', '🍂'];
+
+function fillSeasonLayer(container, emojis, className, count) {
+  if (!container) return;
+  container.textContent = '';
+  for (let i = 0; i < count; i += 1) {
+    const el = document.createElement('span');
+    el.className = className;
+    el.textContent = emojis[i % emojis.length];
+    el.setAttribute('aria-hidden', 'true');
+    el.style.setProperty('--season-i', String(i));
+    el.style.setProperty('--season-x', `${6 + ((i * 17) % 88)}%`);
+    el.style.setProperty('--season-delay', `${(i * 0.55) % 8}s`);
+    el.style.setProperty('--season-duration', `${9 + (i % 7)}s`);
+    el.style.setProperty('--season-size', `${18 + (i % 5) * 4}px`);
+    container.appendChild(el);
+  }
+}
+
 function initSeasonDecor() {
   const active = isHalloweenSeason();
   const decor = document.getElementById('seasonDecor');
+  const banner = document.getElementById('seasonBanner');
   const brandMark = document.getElementById('seasonBrandMark');
+  const brandBat = document.getElementById('seasonBrandBat');
+  const floats = document.getElementById('seasonFloats');
+  const fall = document.getElementById('seasonFall');
 
-  document.documentElement.setAttribute('data-season', active ? 'halloween' : '');
-  if (!active) document.documentElement.removeAttribute('data-season');
+  if (active) document.documentElement.setAttribute('data-season', 'halloween');
+  else document.documentElement.removeAttribute('data-season');
 
-  if (decor) {
-    decor.hidden = !active;
-    decor.setAttribute('aria-hidden', active ? 'false' : 'true');
-  }
-  if (brandMark) {
-    brandMark.hidden = !active;
-    brandMark.setAttribute('aria-hidden', active ? 'false' : 'true');
+  [decor, banner, brandMark, brandBat].forEach((el) => {
+    if (!el) return;
+    el.hidden = !active;
+    el.setAttribute('aria-hidden', active ? 'false' : 'true');
+  });
+
+  if (active) {
+    fillSeasonLayer(floats, HALLOWEEN_FLOAT_EMOJIS, 'season-float', 14);
+    fillSeasonLayer(fall, HALLOWEEN_FALL_EMOJIS, 'season-fall-item', 18);
+  } else {
+    if (floats) floats.textContent = '';
+    if (fall) fall.textContent = '';
   }
 }
 
