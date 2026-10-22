@@ -31,7 +31,7 @@
       } catch (_) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=94">
+  <link rel="stylesheet" href="style.css?v=95">
 </head>
 <body class="dashboard">
 
@@ -41,7 +41,10 @@
     </div>
 
     <div class="header-main" id="sunTimesWidget" aria-live="polite">
-      <div class="sun-time sun-time-rise" id="sunriseValue" title="Sonnenaufgang Bremen">☀ –</div>
+      <div class="sun-time sun-time-rise" id="sunriseValue" title="Sonnenaufgang Bremen">
+        <span class="sun-time-emoji" aria-hidden="true">🌅</span>
+        <span class="sun-time-clock" id="sunriseClock">–</span>
+      </div>
 
       <div class="next-akte-banner" aria-label="Nächste Nr.">
         <svg class="next-akte-car" id="nextAkteCar" viewBox="0 0 128 52" aria-hidden="true" focusable="false">
@@ -59,7 +62,10 @@
         <span class="next-akte-number" id="naechsteNummer">–</span>
       </div>
 
-      <div class="sun-time sun-time-set" id="sunsetValue" title="Sonnenuntergang Bremen">☾ –</div>
+      <div class="sun-time sun-time-set" id="sunsetValue" title="Sonnenuntergang Bremen">
+        <span class="sun-time-emoji" aria-hidden="true">🌇</span>
+        <span class="sun-time-clock" id="sunsetClock">–</span>
+      </div>
 
       <!-- Archiv: Auto-Lieferung (für spätere Nutzung) -->
       <div class="akte-delivery akte-delivery--archived" hidden aria-hidden="true">
@@ -234,6 +240,6 @@
     </button>
   </div>
 
-<script src="script.js?v=132"></script>
+<script src="script.js?v=133"></script>
 </body>
 </html>

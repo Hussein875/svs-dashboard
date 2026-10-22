@@ -2466,16 +2466,14 @@ function formatSunClock(isoLocal) {
 function renderSunTimes(sunriseIso, sunsetIso) {
   const riseEl = document.getElementById('sunriseValue');
   const setEl = document.getElementById('sunsetValue');
+  const riseClock = document.getElementById('sunriseClock');
+  const setClock = document.getElementById('sunsetClock');
   const rise = formatSunClock(sunriseIso);
   const set = formatSunClock(sunsetIso);
-  if (riseEl) {
-    riseEl.textContent = `☀ ${rise}`;
-    riseEl.title = `Sonnenaufgang Bremen ${rise}`;
-  }
-  if (setEl) {
-    setEl.textContent = `☾ ${set}`;
-    setEl.title = `Sonnenuntergang Bremen ${set}`;
-  }
+  if (riseClock) riseClock.textContent = rise;
+  if (setClock) setClock.textContent = set;
+  if (riseEl) riseEl.title = `Sonnenaufgang Bremen ${rise}`;
+  if (setEl) setEl.title = `Sonnenuntergang Bremen ${set}`;
 }
 
 async function fetchSunTimes() {
