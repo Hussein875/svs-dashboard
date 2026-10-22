@@ -52,8 +52,13 @@ function isHalloweenSeason(date = new Date()) {
   }
 }
 
-const HALLOWEEN_FLOAT_EMOJIS = ['🎃', '🦇', '👻', '🕷️', '🍬', '🕸️', '🧙‍♀️', '🧹', '🧛', '💀', '🎃', '🦇'];
-const HALLOWEEN_FALL_EMOJIS = ['🎃', '🦇', '👻', '🍬', '🕷️', '🕸️', '✨', '🍂'];
+const HALLOWEEN_FLOAT_EMOJIS = [
+  '🎃', '🦇', '👻', '🕷️', '🍬', '🕸️', '🧙‍♀️', '🧹', '🧛', '💀',
+  '🐈‍⬛', '🦉', '🔮', '🪦', '😱', '🎃', '🦇', '👻', '🍬', '💀',
+];
+const HALLOWEEN_FALL_EMOJIS = [
+  '🎃', '🦇', '👻', '🍬', '🕷️', '🕸️', '✨', '🍂', '💀', '🧙‍♀️', '🔮', '😱',
+];
 
 function fillSeasonLayer(container, emojis, className, count) {
   if (!container) return;
@@ -64,10 +69,11 @@ function fillSeasonLayer(container, emojis, className, count) {
     el.textContent = emojis[i % emojis.length];
     el.setAttribute('aria-hidden', 'true');
     el.style.setProperty('--season-i', String(i));
-    el.style.setProperty('--season-x', `${6 + ((i * 17) % 88)}%`);
-    el.style.setProperty('--season-delay', `${(i * 0.55) % 8}s`);
-    el.style.setProperty('--season-duration', `${9 + (i % 7)}s`);
-    el.style.setProperty('--season-size', `${18 + (i % 5) * 4}px`);
+    el.style.setProperty('--season-x', `${2 + ((i * 13) % 96)}%`);
+    el.style.setProperty('--season-delay', `${(i * 0.35) % 6}s`);
+    el.style.setProperty('--season-duration', `${6 + (i % 6)}s`);
+    el.style.setProperty('--season-size', `${22 + (i % 6) * 5}px`);
+    el.style.setProperty('--season-swing', `${10 + (i % 8) * 4}px`);
     container.appendChild(el);
   }
 }
@@ -91,8 +97,8 @@ function initSeasonDecor() {
   });
 
   if (active) {
-    fillSeasonLayer(floats, HALLOWEEN_FLOAT_EMOJIS, 'season-float', 14);
-    fillSeasonLayer(fall, HALLOWEEN_FALL_EMOJIS, 'season-fall-item', 18);
+    fillSeasonLayer(floats, HALLOWEEN_FLOAT_EMOJIS, 'season-float', 28);
+    fillSeasonLayer(fall, HALLOWEEN_FALL_EMOJIS, 'season-fall-item', 36);
   } else {
     if (floats) floats.textContent = '';
     if (fall) fall.textContent = '';
