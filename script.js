@@ -1370,7 +1370,13 @@ function isLesungReviewJob(job) {
   if (!job || job.kind !== 'ki') return false;
   if (job.lesungReview === true) return true;
   if (job.phase === 'lesung_review') return true;
-  return String(job.message || '').includes('Lesung prüfen');
+  const msg = String(job.message || '');
+  if (msg.includes('Lesung prüfen') || msg.includes('Felder korrigieren')) return true;
+  return false;
+}
+
+function canEditLesungChecklist(job, allowStop) {
+  return Boolean(allowStop && job?.kind === 'ki' && job.id && isLesungReviewJob(job));
 }
 
 function collectLesungOverridesFromDom(jobId) {
@@ -1406,10 +1412,11 @@ function renderLesungChecklistHtml(job, { editable = false } = {}) {
       const icon = lesungStatusIcon(row.status);
       const skipEdit = String(row.id).startsWith('schadenfoto') || row.id === 'fahrzeugschein';
       if (editable && !skipEdit) {
+        const placeholder = row.id === 'schadentag' ? 'TT.MM.JJJJ — z. B. 27.12.2024' : '';
         return `<li class="bots-check-row bots-check-row--edit">
           <span class="bots-check-state" title="${escapeHtml(row.status)}">${icon}</span>
           <span class="bots-check-label">${label}</span>
-          <input type="text" class="bots-check-input" data-bot-lesung-id="${escapeHtml(job.id)}" data-bot-field="${id}" value="${wert}" aria-label="${label}" />
+          <input type="text" class="bots-check-input" data-bot-lesung-id="${escapeHtml(job.id)}" data-bot-field="${id}" value="${wert}" placeholder="${escapeHtml(placeholder)}" aria-label="${label}" />
         </li>`;
       }
       return `<li class="bots-check-row">
@@ -1432,13 +1439,6 @@ function renderLesungChecklistHtml(job, { editable = false } = {}) {
     html += '</ul>';
   }
   return html;
-}
-
-function isLesungReviewJob(job) {
-  if (!job || job.kind !== 'ki') return false;
-  if (job.lesungReview === true) return true;
-  if (job.phase === 'lesung_review') return true;
-  return String(job.message || '').includes('Lesung prüfen');
 }
 
 function collectLesungOverridesFromDom(jobId) {
@@ -1570,7 +1570,7 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
       ? `<button type="button" class="bots-stop bots-action" data-bot-id="${escapeHtml(job.id || '')}" ${canStop ? '' : 'disabled'}>Stopp</button>`
       : '';
     const reviewMode = isLesungReviewJob(job);
-    const canEditLesung = allowStop && reviewMode;
+    const canEditLesung = canEditLesungChecklist(job, allowStop);
     const uxStartBtn = canEditLesung && job.id
       ? `<button type="button" class="bots-ux-start bots-action bots-action--primary" data-bot-ux-start="${escapeHtml(job.id)}" title="Speichert deine Korrekturen und startet UltraExpert">Alles vollständig — UX starten</button>`
       : '';
