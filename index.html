@@ -31,7 +31,7 @@
       } catch (_) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=104">
+  <link rel="stylesheet" href="style.css?v=146">
 </head>
 <body class="dashboard">
 
@@ -258,6 +258,23 @@
     <div class="pin-modal-dialog bots-dialog" role="dialog" aria-labelledby="botsModalTitle" aria-modal="true">
       <h2 id="botsModalTitle" class="pin-modal-title">Bots</h2>
       <p class="badge-admin-hint">Laufende und kürzlich beendete Bot-Aufträge (nur auf dem Server, kein Archiv). Nach dem Lauf erscheint der Bericht mit Gelesen, Gespeichert und Offen — Kopieren oder UltraExpert-Link.</p>
+      <button type="button" id="botsUnlockAdmin" class="pin-btn pin-btn-secondary bots-unlock-btn" hidden>Admin-PIN eingeben</button>
+      <div id="botsControlBar" class="bots-control-bar" hidden>
+        <div class="bots-control-group bots-control-group--akte">
+          <label class="bots-control-label" for="botsAkteInput">Akte</label>
+          <input type="text" id="botsAkteInput" class="bots-akte-input" list="botsAkteList" placeholder="Nummer, z. B. 2301" autocomplete="off" spellcheck="false" />
+          <datalist id="botsAkteList"></datalist>
+        </div>
+        <div class="bots-control-group bots-control-group--ki">
+          <button type="button" id="botsKiStart" class="bots-action bots-action--primary">Mit KI starten</button>
+          <button type="button" id="botsKiClear" class="bots-action">KI-Markierung entfernen</button>
+        </div>
+        <div class="bots-control-group bots-control-group--assign">
+          <span class="bots-control-label">Zuweisen</span>
+          <button type="button" id="botsAssignRamazan" class="bots-action" data-assign-column="Ramazan">→ Ramazan</button>
+          <button type="button" id="botsAssignRobar" class="bots-action" data-assign-column="Robar">→ Robar</button>
+        </div>
+      </div>
       <div id="botsList" class="bots-list" aria-live="polite"></div>
       <p id="botsError" class="pin-error" aria-live="polite"></p>
       <div class="pin-actions">
@@ -278,6 +295,6 @@
     </button>
   </div>
 
-<script src="script.js?v=143"></script>
+<script src="script.js?v=146"></script>
 </body>
 </html>

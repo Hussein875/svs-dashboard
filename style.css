@@ -686,7 +686,6 @@ html[data-theme="dark"] .logo {
 }
 
 .bots-dialog {
-  width: min(720px, calc(100vw - 24px));
   max-height: calc(100vh - 32px);
   display: flex;
   flex-direction: column;
@@ -716,6 +715,94 @@ html[data-theme="dark"] .logo {
   min-width: 7.5rem;
 }
 
+.bots-unlock-btn {
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.bots-control-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-card) 40%, transparent);
+}
+
+.bots-control-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.bots-control-group--akte {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+}
+
+.bots-control-group--ki {
+  flex: 1 1 auto;
+}
+
+.bots-control-group--assign {
+  flex: 0 1 auto;
+  padding-left: 4px;
+  border-left: 1px solid color-mix(in srgb, var(--border-strong) 70%, transparent);
+}
+
+.bots-control-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.bots-akte-input {
+  flex: 1;
+  min-width: 7rem;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+.bots-action {
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: color-mix(in srgb, var(--bg-card) 55%, var(--border-strong));
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bots-action--primary {
+  border-color: color-mix(in srgb, var(--accent, #3b82f6) 35%, var(--border-strong));
+  background: color-mix(in srgb, var(--accent, #3b82f6) 14%, var(--bg-card));
+  color: var(--accent, #2563eb);
+  font-weight: 700;
+}
+
+.bots-row-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--border-strong) 55%, transparent);
+}
+
 .bots-list {
   display: flex;
   flex-direction: column;
@@ -735,16 +822,22 @@ html[data-theme="dark"] .logo {
 
 .bots-row {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 0;
   padding: 12px 14px;
   border: 1px solid var(--border-strong);
   border-radius: 12px;
   background: var(--bg-card);
 }
 
-.bots-row--bericht {
+.bots-row-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+}
+
+.bots-row--bericht .bots-row-header {
   align-items: flex-start;
 }
 
@@ -759,14 +852,11 @@ html[data-theme="dark"] .logo {
 .bots-row-body {
   flex: 1;
   min-width: 0;
+  width: 100%;
 }
 
 .bots-row-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  flex-shrink: 0;
+  display: contents;
 }
 
 .bots-kind {
@@ -831,14 +921,47 @@ html[data-theme="dark"] .logo {
   max-height: min(22vh, 200px);
 }
 
+.bots-checklist--edit {
+  max-height: min(58vh, 620px);
+}
+
 .bots-check-row {
   display: grid;
-  grid-template-columns: 1.1rem minmax(5.5rem, 38%) 1fr;
-  gap: 6px 8px;
+  grid-template-columns: 1.25rem minmax(8.5rem, 34%) minmax(0, 1fr);
+  gap: 6px 12px;
   align-items: center;
-  padding: 4px 8px;
-  font-size: 11px;
+  padding: 5px 10px;
+  font-size: 12px;
   border-bottom: 1px solid color-mix(in srgb, var(--border-strong) 65%, transparent);
+}
+
+.bots-check-row--edit {
+  grid-template-columns: 1.5rem 1fr;
+  grid-template-rows: auto auto;
+  align-items: start;
+  gap: 4px 10px;
+  padding: 8px 12px;
+}
+
+.bots-check-row--edit .bots-check-state {
+  grid-row: 1 / span 2;
+  align-self: start;
+  padding-top: 3px;
+}
+
+.bots-check-row--edit .bots-check-label {
+  grid-column: 2;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.bots-check-row--edit .bots-check-input {
+  grid-column: 2;
+  width: 100%;
+  min-width: 0;
+  font-size: 14px;
+  padding: 8px 10px;
+  min-height: 2.35rem;
 }
 
 .bots-check-row:last-child {
@@ -861,6 +984,7 @@ html[data-theme="dark"] .logo {
 
 .bots-check-input {
   width: 100%;
+  min-width: 0;
   font: inherit;
   font-size: 11px;
   padding: 3px 6px;
@@ -868,6 +992,11 @@ html[data-theme="dark"] .logo {
   border: 1px solid var(--border-strong);
   background: var(--bg-card);
   color: var(--text);
+}
+
+.bots-check-input:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent, #3b82f6) 35%, transparent);
+  border-color: var(--accent, #3b82f6);
 }
 
 .bots-ux-start {
@@ -2595,6 +2724,30 @@ html[data-kiosk="1"] .logo {
   border: 1px solid var(--border-strong);
   background: var(--bg-panel);
   box-shadow: var(--shadow);
+}
+
+.pin-modal-dialog.bots-dialog {
+  width: min(1120px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  padding: 22px 24px 18px;
+}
+
+#botsModal.pin-modal .pin-modal-dialog.bots-dialog {
+  width: min(1120px, calc(100vw - 24px));
+  max-width: none;
+}
+
+#botsModal.pin-modal .pin-modal-dialog.bots-dialog.bots-dialog--review {
+  width: min(1280px, calc(100vw - 16px));
+  max-height: calc(100vh - 12px);
+}
+
+#botsModal.pin-modal .bots-dialog--review .bots-list {
+  max-height: min(68vh, 780px);
+}
+
+#botsModal.pin-modal .bots-dialog--review .bots-checklist--edit {
+  max-height: min(62vh, 680px);
 }
 
 .pin-modal-title {

@@ -723,6 +723,9 @@ async function authenticateAdmin(pin) {
   setAdminToken(data.token);
   adminUnlocked = true;
   updateAdminUi();
+  updateBotsModalAdminActions();
+  const botsModal = document.getElementById('botsModal');
+  if (botsModal && !botsModal.hidden) refreshBotsModal();
   if (lastBoardData.length) renderBoard(lastBoardData);
 }
 
@@ -932,25 +935,51 @@ async function updateKiAkteOnServer(akte, action) {
   }
 }
 
-function startKiAkteProcessing(akte) {
+function startKiAkteProcessing(akte, { viaBotsModal = false } = {}) {
   const nummer = String(akte?.nummer || '').trim();
   const card = nummer
     ? document.querySelector(`.card[data-akte="${CSS.escape(nummer)}"]`)
     : null;
   if (card) showAssignFeedback(card, 'pending', 'KI startet…');
+  else if (viaBotsModal) setBotsModalMessage('KI startet…');
 
   updateKiAkteOnServer(akte, 'start').then((result) => {
     if (result?.skipped) {
-      if (card) showAssignFeedback(card, 'ok', result.message || 'Schon fertig, nichts geändert');
+      const msg = result.message || 'Schon fertig, nichts geändert';
+      if (card) showAssignFeedback(card, 'ok', msg);
+      else if (viaBotsModal) setBotsModalMessage(msg);
       return;
     }
     if (!result?.ok) {
-      if (card) showAssignFeedback(card, 'error', result?.error || 'KI konnte nicht gestartet werden');
+      const err = result?.error || 'KI konnte nicht gestartet werden';
+      if (card) showAssignFeedback(card, 'error', err);
+      else if (viaBotsModal) setBotsModalMessage(err);
       return;
     }
     if (card) showAssignFeedback(card, 'ok', 'Bearbeitung gestartet');
+    else if (viaBotsModal) setBotsModalMessage('');
     if (lastBoardData.length) renderBoard(lastBoardData);
     watchKiJob(nummer);
+    if (viaBotsModal) refreshBotsList();
+  });
+}
+
+function clearKiAkte(nummer, { viaBotsModal = false } = {}) {
+  return updateKiAkteOnServer({ nummer }, 'clear').then((result) => {
+    if (result === false) {
+      if (viaBotsModal) setBotsModalMessage('Admin-Session fehlt');
+      return result;
+    }
+    if (viaBotsModal) {
+      if (result?.ok) {
+        setBotsModalMessage('KI-Markierung entfernt');
+        refreshBotsList();
+        if (lastBoardData.length) renderBoard(lastBoardData);
+      } else if (result?.error) {
+        setBotsModalMessage(result.error);
+      }
+    }
+    return result;
   });
 }
 
@@ -995,8 +1024,8 @@ function watchKiJob(nummer) {
   kiWatchTimers.set(key, timer);
 }
 
-function clearKiAkte(nummer) {
-  updateKiAkteOnServer({ nummer }, 'clear');
+function clearKiAkteFromContext(nummer) {
+  clearKiAkte(nummer);
 }
 
 function appendKiProcessingBadge(card) {
@@ -1067,7 +1096,7 @@ function bindAkteContextMenuControls() {
       return;
     }
     if (action === 'ki-clear') {
-      clearKiAkte(target.nummer);
+      clearKiAkteFromContext(target.nummer);
       if (lastBoardData.length) renderBoard(lastBoardData);
     }
   });
@@ -1097,6 +1126,60 @@ function bindCardAdminContextMenu(card, akte) {
 }
 
 let botsPollTimer = null;
+
+function isBotsModalVisible() {
+  const modal = document.getElementById('botsModal');
+  return Boolean(modal && !modal.hidden);
+}
+
+function setBotsModalMessage(message) {
+  if (!isBotsModalVisible()) return;
+  const errorEl = document.getElementById('botsError');
+  if (errorEl) errorEl.textContent = String(message || '').trim();
+}
+
+function refreshBotsAkteDatalist() {
+  const list = document.getElementById('botsAkteList');
+  if (!list || !lastBoardData.length) {
+    if (list) list.innerHTML = '';
+    return;
+  }
+  const seen = new Set();
+  const options = [];
+  lastBoardData.forEach((row) => {
+    const nummer = String(row.Eingang || '').trim();
+    const key = normalizeAkteKey(nummer);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    options.push(`<option value="${escapeHtml(nummer)}"></option>`);
+  });
+  list.innerHTML = options.join('');
+}
+
+function resolveBotsBoardAkte(input) {
+  const raw = String(input ?? '').trim();
+  if (!raw || !lastBoardData.length) return null;
+  const key = normalizeAkteKey(raw);
+  if (!key) return null;
+  const row = lastBoardData.find((entry) => normalizeAkteKey(entry.Eingang) === key);
+  if (!row) return null;
+  return {
+    nummer: row.Eingang,
+    status: String(row.Status || '').toLowerCase().trim(),
+    driveFolderId: String(row.DriveFolderId || '').trim(),
+    kiMarked: parseKiSheetFlag(row.KiStatus) || serverKiAkten.has(key),
+  };
+}
+
+function getBotsSelectedAkte() {
+  const input = document.getElementById('botsAkteInput');
+  return resolveBotsBoardAkte(input?.value);
+}
+
+function focusBotsAkteInput() {
+  const input = document.getElementById('botsAkteInput');
+  if (input) input.focus();
+}
 
 function hideBotsModal() {
   const modal = document.getElementById('botsModal');
@@ -1295,7 +1378,7 @@ function renderLesungChecklistHtml(job, { editable = false } = {}) {
 
   let html = '';
   if (rows.length) {
-    html += '<ul class="bots-checklist" aria-label="Gelesene Felder">';
+    html += `<ul class="bots-checklist${editable ? ' bots-checklist--edit' : ''}" aria-label="Gelesene Felder">`;
     html += rows.map((row) => {
       const id = escapeHtml(row.id);
       const label = escapeHtml(row.label);
@@ -1365,11 +1448,19 @@ async function startUxAfterLesung(jobId) {
   refreshBotsList();
 }
 
+function syncBotsDialogReviewMode(jobs) {
+  const dialog = document.querySelector('#botsModal .bots-dialog');
+  if (!dialog) return;
+  const review = (jobs || []).some((job) => job.lesungReview === true);
+  dialog.classList.toggle('bots-dialog--review', review);
+}
+
 function renderBotsList(jobs, { allowStop = false } = {}) {
   const list = document.getElementById('botsList');
   if (!list) return;
   const visible = dedupeBotsForDisplay(jobs);
   lastBotsJobs = visible;
+  syncBotsDialogReviewMode(visible);
   if (!visible.length) {
     list.innerHTML = '<p class="bots-empty">Gerade läuft kein Bot.</p>';
     return;
@@ -1388,32 +1479,56 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
     const stimmung = botStimmung(job, job.message || '');
     const jobKey = escapeHtml(`${job.kind || 'ki'}|${normalizeAkteKey(job.akte)}`);
     const dossierUrl = String(job.dossierUrl || '').trim();
+    const folderId = String(job.driveFolderId || '').trim();
+    const boardAkte = resolveBotsBoardAkte(job.akte);
+    const folderForStart = folderId || boardAkte?.driveFolderId || '';
     const uxLink = dossierUrl && (job.status === 'opened' || job.status === 'done')
-      ? `<a class="bots-ux-link" href="${escapeHtml(dossierUrl)}" target="_blank" rel="noopener">UltraExpert öffnen</a>`
+      ? `<a class="bots-ux-link" href="${escapeHtml(dossierUrl)}" target="_blank" rel="noopener">UltraExpert</a>`
+      : '';
+    const driveLink = folderForStart
+      ? `<a class="bots-ux-link bots-drive-link" href="https://drive.google.com/drive/folders/${escapeHtml(folderForStart)}" target="_blank" rel="noopener">Drive-Ordner</a>`
       : '';
     const copyBtn = job.message
-      ? `<button type="button" class="bots-copy" data-bot-key="${jobKey}">Kopieren</button>`
+      ? `<button type="button" class="bots-copy bots-action" data-bot-key="${jobKey}">Kopieren</button>`
       : '';
     const canContinue = allowStop
       && job.kind === 'ki'
       && job.akte
       && (job.status === 'error' || job.status === 'opened' || job.status === 'stopped');
     const weiterBtn = canContinue
-      ? `<button type="button" class="bots-stop bots-weiter" data-bot-weiter="${akte}" data-bot-folder="${escapeHtml(job.driveFolderId || '')}">Mach weiter</button>`
+      ? `<button type="button" class="bots-stop bots-weiter bots-action" data-bot-weiter="${akte}" data-bot-folder="${escapeHtml(folderForStart)}">Mach weiter</button>`
+      : '';
+    const canRestart = allowStop
+      && job.kind === 'ki'
+      && job.akte
+      && folderForStart
+      && !canStop
+      && ['error', 'stopped', 'skipped', 'opened', 'done'].includes(job.status);
+    const restartBtn = canRestart
+      ? `<button type="button" class="bots-action bots-action--primary" data-bot-ki-restart="${akte}" data-bot-folder="${escapeHtml(folderForStart)}">KI neu starten</button>`
+      : '';
+    const showClearMark = allowStop
+      && job.kind === 'ki'
+      && job.akte
+      && (boardAkte?.kiMarked || ['opened', 'done', 'error', 'stopped', 'skipped'].includes(job.status));
+    const clearMarkBtn = showClearMark
+      ? `<button type="button" class="bots-action" data-bot-ki-clear-akte="${akte}">Markierung entfernen</button>`
       : '';
     const stopBtn = allowStop
-      ? `<button type="button" class="bots-stop" data-bot-id="${escapeHtml(job.id || '')}" ${canStop ? '' : 'disabled'}>Stopp</button>`
+      ? `<button type="button" class="bots-stop bots-action" data-bot-id="${escapeHtml(job.id || '')}" ${canStop ? '' : 'disabled'}>Stopp</button>`
       : '';
     const uxStartBtn = allowStop && job.lesungReview && job.id
-      ? `<button type="button" class="bots-ux-start" data-bot-ux-start="${escapeHtml(job.id)}">UX starten</button>`
+      ? `<button type="button" class="bots-ux-start bots-action bots-action--primary" data-bot-ux-start="${escapeHtml(job.id)}">UX starten</button>`
       : '';
     const checklist = renderLesungChecklistHtml(job, {
       editable: allowStop && job.lesungReview === true,
     });
-    const actions = `${uxStartBtn}${copyBtn}${weiterBtn}${stopBtn}`;
+    const toolbar = [uxStartBtn, restartBtn, weiterBtn, stopBtn, copyBtn, clearMarkBtn, driveLink, uxLink]
+      .filter(Boolean)
+      .join('');
     return `
-      <div class="bots-row${bericht ? ' bots-row--bericht' : ''}">
-        <div class="bots-leading">
+      <div class="bots-row${bericht ? ' bots-row--bericht' : ''}" data-bot-row-akte="${akte}">
+        <div class="bots-row-header">
           <span class="bots-mood" title="${escapeHtml(stimmung.titel)}">${stimmung.zeichen}</span>
           <div class="bots-row-body">
             <div class="bots-kind">${kind}</div>
@@ -1422,10 +1537,9 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
             ${activity ? `<div class="bots-activity">${escapeHtml(activity)}</div>` : ''}
             ${checklist}
             ${bericht ? `<pre class="bots-bericht">${bericht}</pre>` : ''}
-            ${uxLink}
+            ${toolbar ? `<div class="bots-row-toolbar">${toolbar}</div>` : ''}
           </div>
         </div>
-        ${actions ? `<div class="bots-row-actions">${actions}</div>` : ''}
       </div>
     `;
   }).join('');
@@ -1490,14 +1604,80 @@ async function refreshPublicBotsList() {
 function updateBotsModalAdminActions() {
   const stopAllBtn = document.getElementById('botsStopAll');
   const clearFinishedBtn = document.getElementById('botsClearFinished');
+  const controlBar = document.getElementById('botsControlBar');
+  const unlockBtn = document.getElementById('botsUnlockAdmin');
   const hint = document.querySelector('#botsModal .badge-admin-hint');
   if (stopAllBtn) stopAllBtn.hidden = !adminUnlocked;
   if (clearFinishedBtn) clearFinishedBtn.hidden = !adminUnlocked;
+  if (controlBar) controlBar.hidden = !adminUnlocked;
+  if (unlockBtn) unlockBtn.hidden = adminUnlocked;
   if (hint) {
     hint.textContent = adminUnlocked
-      ? 'Laufende und kürzlich beendete Aufträge. Stopp nur bei wartend/laufend; „Erledigte entfernen“ räumt die Liste auf.'
-      : 'Was gerade läuft (nur Anzeige). Stoppen und Aufräumen geht nur mit Admin-PIN.';
+      ? 'Steuerung für KI und Zuweisung: Akte wählen oder laufenden Job unten bedienen. Lesung prüfen → korrigieren → UX starten. UltraExpert für laufende Akte schließen.'
+      : 'Laufende Jobs (nur Anzeige). Stoppen, starten und Zuweisen geht mit Admin-PIN.';
   }
+}
+
+async function startKiFromBotsControl() {
+  if (!adminUnlocked) {
+    showPinModal();
+    return;
+  }
+  const akte = getBotsSelectedAkte();
+  if (!akte) {
+    setBotsModalMessage('Akte nicht auf dem Board — Nummer prüfen.');
+    focusBotsAkteInput();
+    return;
+  }
+  if (!akte.driveFolderId) {
+    setBotsModalMessage('Kein Drive-Ordner in Spalte F — KI kann nicht starten.');
+    return;
+  }
+  startKiAkteProcessing(akte, { viaBotsModal: true });
+}
+
+async function clearKiFromBotsControl() {
+  if (!adminUnlocked) {
+    showPinModal();
+    return;
+  }
+  const akte = getBotsSelectedAkte();
+  if (!akte) {
+    setBotsModalMessage('Akte nicht auf dem Board.');
+    focusBotsAkteInput();
+    return;
+  }
+  await clearKiAkte(akte.nummer, { viaBotsModal: true });
+}
+
+async function assignFromBotsControl(column) {
+  if (!adminUnlocked) {
+    showPinModal();
+    return;
+  }
+  const akte = getBotsSelectedAkte();
+  if (!akte) {
+    setBotsModalMessage('Akte nicht auf dem Board.');
+    focusBotsAkteInput();
+    return;
+  }
+  const card = document.querySelector(`.card[data-akte="${CSS.escape(akte.nummer)}"]`);
+  setBotsModalMessage(`Zuweisung nach ${column}…`);
+  await assignAkteToColumn(akte.nummer, column, card);
+  await refreshBotsList();
+}
+
+function restartKiFromBotsRow(akteNummer, driveFolderId) {
+  const board = resolveBotsBoardAkte(akteNummer);
+  const folder = String(driveFolderId || board?.driveFolderId || '').trim();
+  if (!folder) {
+    setBotsModalMessage('Drive-Ordner fehlt — KI kann nicht neu starten.');
+    return;
+  }
+  startKiAkteProcessing(
+    { nummer: board?.nummer || akteNummer, driveFolderId: folder },
+    { viaBotsModal: true },
+  );
 }
 
 function refreshBotsModal() {
@@ -1509,10 +1689,12 @@ function showBotsModal() {
   const modal = document.getElementById('botsModal');
   if (!modal) return;
   updateBotsModalAdminActions();
+  refreshBotsAkteDatalist();
   modal.hidden = false;
   refreshBotsModal();
   if (botsPollTimer) window.clearInterval(botsPollTimer);
   botsPollTimer = window.setInterval(refreshBotsModal, 3000);
+  if (adminUnlocked) focusBotsAkteInput();
 }
 
 async function clearFinishedBots() {
@@ -1562,6 +1744,12 @@ function bindBotsControls() {
   const closeBtn = document.getElementById('botsClose');
   const stopAllBtn = document.getElementById('botsStopAll');
   const clearFinishedBtn = document.getElementById('botsClearFinished');
+  const unlockBtn = document.getElementById('botsUnlockAdmin');
+  const kiStartBtn = document.getElementById('botsKiStart');
+  const kiClearBtn = document.getElementById('botsKiClear');
+  const assignRamazanBtn = document.getElementById('botsAssignRamazan');
+  const assignRobarBtn = document.getElementById('botsAssignRobar');
+  const akteInput = document.getElementById('botsAkteInput');
   const list = document.getElementById('botsList');
   if (!btn || btn.dataset.bound === '1') return;
   btn.dataset.bound = '1';
@@ -1573,6 +1761,23 @@ function bindBotsControls() {
   if (closeBtn) closeBtn.addEventListener('click', hideBotsModal);
   if (stopAllBtn) stopAllBtn.addEventListener('click', () => stopBot('', true));
   if (clearFinishedBtn) clearFinishedBtn.addEventListener('click', () => clearFinishedBots());
+  if (unlockBtn) unlockBtn.addEventListener('click', () => showPinModal());
+  if (kiStartBtn) kiStartBtn.addEventListener('click', () => startKiFromBotsControl());
+  if (kiClearBtn) kiClearBtn.addEventListener('click', () => clearKiFromBotsControl());
+  if (assignRamazanBtn) {
+    assignRamazanBtn.addEventListener('click', () => assignFromBotsControl('Ramazan'));
+  }
+  if (assignRobarBtn) {
+    assignRobarBtn.addEventListener('click', () => assignFromBotsControl('Robar'));
+  }
+  if (akteInput) {
+    akteInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        startKiFromBotsControl();
+      }
+    });
+  }
   if (modal) {
     modal.addEventListener('click', (event) => {
       if (event.target === modal) hideBotsModal();
@@ -1599,6 +1804,24 @@ function bindBotsControls() {
       if (uxStartBtn) {
         startUxAfterLesung(uxStartBtn.getAttribute('data-bot-ux-start'));
         return;
+      }
+      const restartBtn = event.target.closest('[data-bot-ki-restart]');
+      if (restartBtn) {
+        restartKiFromBotsRow(
+          restartBtn.getAttribute('data-bot-ki-restart'),
+          restartBtn.getAttribute('data-bot-folder'),
+        );
+        return;
+      }
+      const clearMarkBtn = event.target.closest('[data-bot-ki-clear-akte]');
+      if (clearMarkBtn) {
+        clearKiAkte(clearMarkBtn.getAttribute('data-bot-ki-clear-akte'), { viaBotsModal: true });
+        return;
+      }
+      const row = event.target.closest('[data-bot-row-akte]');
+      if (row && !event.target.closest('button, a, input')) {
+        const input = document.getElementById('botsAkteInput');
+        if (input) input.value = row.getAttribute('data-bot-row-akte') || '';
       }
       const stopBtn = event.target.closest('[data-bot-id]');
       if (!stopBtn || stopBtn.disabled) return;
@@ -3172,6 +3395,7 @@ function renderBoard(data) {
     map[col].forEach((item) => previousCardPositions.set(item.nummer, col));
   });
   isFirstBoardRender = false;
+  if (isBotsModalVisible()) refreshBotsAkteDatalist();
 }
 
 const THEME_STORAGE_KEY = 'svs-dashboard-theme';
