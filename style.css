@@ -377,6 +377,14 @@ html[data-theme="dark"] .logo {
   overflow: auto;
 }
 
+.bots-ux-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent, #3b82f6);
+}
+
 .bots-copy {
   border: 0;
   border-radius: 999px;

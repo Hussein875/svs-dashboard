@@ -1049,7 +1049,10 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
     const bericht = anzeige.bericht ? escapeHtml(anzeige.bericht) : '';
     const stimmung = botStimmung(job, job.message || '');
     const jobKey = escapeHtml(`${job.kind || 'ki'}|${normalizeAkteKey(job.akte)}`);
-    const copyBtn = job.message
+    const dossierUrl = String(job.dossierUrl || '').trim();
+    const uxLink = dossierUrl && (job.status === 'opened' || job.status === 'done')
+      ? `<a class="bots-ux-link" href="${escapeHtml(dossierUrl)}" target="_blank" rel="noopener">UltraExpert öffnen</a>`
+      : '';
       ? `<button type="button" class="bots-copy" data-bot-key="${jobKey}">Kopieren</button>`
       : '';
     const canContinue = allowStop
@@ -1072,6 +1075,7 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
             <div class="bots-akte">${akte}</div>
             <div class="bots-meta">${state}</div>
             ${bericht ? `<pre class="bots-bericht">${bericht}</pre>` : ''}
+            ${uxLink}
           </div>
         </div>
         ${actions ? `<div class="bots-row-actions">${actions}</div>` : ''}
