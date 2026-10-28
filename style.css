@@ -686,7 +686,17 @@ html[data-theme="dark"] .logo {
 }
 
 .bots-dialog {
-  width: min(520px, 100%);
+  width: min(720px, calc(100vw - 24px));
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+
+.bots-dialog .pin-modal-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .bots-dialog .pin-actions {
@@ -694,6 +704,7 @@ html[data-theme="dark"] .logo {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 8px;
+  flex-shrink: 0;
 }
 
 .bots-dialog .pin-actions .pin-btn-secondary {
@@ -709,7 +720,9 @@ html[data-theme="dark"] .logo {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: min(50vh, 360px);
+  flex: 1;
+  min-height: 0;
+  max-height: min(72vh, 640px);
   overflow: auto;
   margin-bottom: 12px;
 }
@@ -722,7 +735,7 @@ html[data-theme="dark"] .logo {
 
 .bots-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
@@ -806,7 +819,7 @@ html[data-theme="dark"] .logo {
   list-style: none;
   margin: 8px 0 0;
   padding: 0;
-  max-height: 220px;
+  max-height: min(48vh, 480px);
   overflow: auto;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
@@ -815,7 +828,7 @@ html[data-theme="dark"] .logo {
 
 .bots-checklist--ux {
   margin-top: 6px;
-  max-height: 120px;
+  max-height: min(22vh, 200px);
 }
 
 .bots-check-row {
