@@ -905,6 +905,16 @@ html[data-theme="dark"] .logo {
   word-break: break-word;
 }
 
+.bots-review-hint {
+  margin: 8px 0 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent, #3884ff) 14%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--accent, #3884ff) 35%, var(--border-strong));
+}
+
 .bots-checklist {
   list-style: none;
   margin: 8px 0 0;

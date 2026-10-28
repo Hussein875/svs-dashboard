@@ -1200,6 +1200,8 @@ function formatBotRuntime(ms) {
 
 function botStatusLabel(job) {
   if (job.lesungReview) return 'Lesung prüfen';
+  if (job.phase === 'lesung_review') return 'Lesung prüfen';
+  if (String(job.message || '').includes('Lesung prüfen')) return 'Lesung prüfen';
   if (job.status === 'queued') return 'wartet';
   if (job.status === 'running') {
     if (job.phase === 'lesen') return `${formatBotRuntime(job.runningForMs)} · liest`;
@@ -1364,6 +1366,24 @@ function dedupeBotsForDisplay(jobs) {
   );
 }
 
+function isLesungReviewJob(job) {
+  if (!job || job.kind !== 'ki') return false;
+  if (job.lesungReview === true) return true;
+  if (job.phase === 'lesung_review') return true;
+  return String(job.message || '').includes('Lesung prüfen');
+}
+
+function collectLesungOverridesFromDom(jobId) {
+  const overrides = {};
+  if (!jobId) return overrides;
+  document.querySelectorAll(`.bots-check-input[data-bot-lesung-id="${CSS.escape(jobId)}"]`).forEach((input) => {
+    const field = input.getAttribute('data-bot-field');
+    if (!field) return;
+    overrides[field] = input.value;
+  });
+  return overrides;
+}
+
 function lesungStatusIcon(status) {
   if (status === 'ok') return '✓';
   if (status === 'unleserlich') return '?';
@@ -1400,7 +1420,7 @@ function renderLesungChecklistHtml(job, { editable = false } = {}) {
     }).join('');
     html += '</ul>';
   }
-  if (ux.length && !job.lesungReview) {
+  if (ux.length && !isLesungReviewJob(job)) {
     html += '<ul class="bots-checklist bots-checklist--ux" aria-label="UltraExpert">';
     html += ux.map((row) => {
       const st = row.status === 'ok' ? '✓' : row.status === 'laeuft' ? '…' : '○';
@@ -1414,44 +1434,76 @@ function renderLesungChecklistHtml(job, { editable = false } = {}) {
   return html;
 }
 
-async function patchLesungOverride(jobId, fieldId, value) {
+function isLesungReviewJob(job) {
+  if (!job || job.kind !== 'ki') return false;
+  if (job.lesungReview === true) return true;
+  if (job.phase === 'lesung_review') return true;
+  return String(job.message || '').includes('Lesung prüfen');
+}
+
+function collectLesungOverridesFromDom(jobId) {
+  const overrides = {};
+  if (!jobId) return overrides;
+  document.querySelectorAll(`.bots-check-input[data-bot-lesung-id="${CSS.escape(jobId)}"]`).forEach((input) => {
+    const field = input.getAttribute('data-bot-field');
+    if (!field) return;
+    overrides[field] = input.value;
+  });
+  return overrides;
+}
+
+async function patchLesungOverrides(jobId, overrides) {
   const token = getAdminToken();
-  if (!token || !jobId || !fieldId) return;
+  if (!token || !jobId || !overrides || typeof overrides !== 'object') return { ok: false };
   const res = await fetch(`${ASSIGN_API_URL}/api/bots/${encodeURIComponent(jobId)}/lesung`, {
     method: 'PATCH',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ overrides: { [fieldId]: value } }),
+    body: JSON.stringify({ overrides }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.ok) {
     const errorEl = document.getElementById('botsError');
     if (errorEl) errorEl.textContent = data.error || 'Korrektur nicht gespeichert';
+    return { ok: false, error: data.error };
   }
+  return { ok: true, job: data.job };
+}
+
+async function patchLesungOverride(jobId, fieldId, value) {
+  return patchLesungOverrides(jobId, { [fieldId]: value });
 }
 
 async function startUxAfterLesung(jobId) {
   const token = getAdminToken();
   if (!token || !jobId) return;
+  const errorEl = document.getElementById('botsError');
+  const overrides = collectLesungOverridesFromDom(jobId);
+  const saved = await patchLesungOverrides(jobId, overrides);
+  if (!saved.ok) return;
   const res = await fetch(`${ASSIGN_API_URL}/api/bots/${encodeURIComponent(jobId)}/ux-start`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ overrides }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || !data.ok) {
-    const errorEl = document.getElementById('botsError');
     if (errorEl) errorEl.textContent = data.error || 'UX-Start fehlgeschlagen';
     return;
   }
+  if (errorEl) errorEl.textContent = '';
   refreshBotsList();
 }
 
 function syncBotsDialogReviewMode(jobs) {
   const dialog = document.querySelector('#botsModal .bots-dialog');
   if (!dialog) return;
-  const review = (jobs || []).some((job) => job.lesungReview === true);
+  const review = (jobs || []).some((job) => isLesungReviewJob(job));
   dialog.classList.toggle('bots-dialog--review', review);
 }
 
@@ -1517,11 +1569,18 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
     const stopBtn = allowStop
       ? `<button type="button" class="bots-stop bots-action" data-bot-id="${escapeHtml(job.id || '')}" ${canStop ? '' : 'disabled'}>Stopp</button>`
       : '';
-    const uxStartBtn = allowStop && job.lesungReview && job.id
-      ? `<button type="button" class="bots-ux-start bots-action bots-action--primary" data-bot-ux-start="${escapeHtml(job.id)}">UX starten</button>`
+    const reviewMode = isLesungReviewJob(job);
+    const canEditLesung = allowStop && reviewMode;
+    const uxStartBtn = canEditLesung && job.id
+      ? `<button type="button" class="bots-ux-start bots-action bots-action--primary" data-bot-ux-start="${escapeHtml(job.id)}" title="Speichert deine Korrekturen und startet UltraExpert">Alles vollständig — UX starten</button>`
       : '';
+    const reviewHint = reviewMode && allowStop
+      ? '<p class="bots-review-hint">Felder unten anpassen (z. B. Schadentag), dann <strong>Alles vollständig — UX starten</strong>.</p>'
+      : reviewMode && !allowStop
+        ? '<p class="bots-review-hint">Admin-PIN oben → Felder korrigieren und UX starten.</p>'
+        : '';
     const checklist = renderLesungChecklistHtml(job, {
-      editable: allowStop && job.lesungReview === true,
+      editable: canEditLesung,
     });
     const toolbar = [uxStartBtn, restartBtn, weiterBtn, stopBtn, copyBtn, clearMarkBtn, driveLink, uxLink]
       .filter(Boolean)
@@ -1535,6 +1594,7 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
             <div class="bots-akte">${akte}</div>
             <div class="bots-meta">${state}</div>
             ${activity ? `<div class="bots-activity">${escapeHtml(activity)}</div>` : ''}
+            ${reviewHint}
             ${checklist}
             ${bericht ? `<pre class="bots-bericht">${bericht}</pre>` : ''}
             ${toolbar ? `<div class="bots-row-toolbar">${toolbar}</div>` : ''}
@@ -1613,8 +1673,8 @@ function updateBotsModalAdminActions() {
   if (unlockBtn) unlockBtn.hidden = adminUnlocked;
   if (hint) {
     hint.textContent = adminUnlocked
-      ? 'Steuerung für KI und Zuweisung: Akte wählen oder laufenden Job unten bedienen. Lesung prüfen → korrigieren → UX starten. UltraExpert für laufende Akte schließen.'
-      : 'Laufende Jobs (nur Anzeige). Stoppen, starten und Zuweisen geht mit Admin-PIN.';
+      ? 'Lesung prüfen: Felder korrigieren → „Alles vollständig — UX starten“. UltraExpert für laufende Akte schließen.'
+      : 'Laufende Jobs (nur Anzeige). Zum Bearbeiten und Starten: Admin-PIN oben.';
   }
 }
 
