@@ -1116,8 +1116,13 @@ function formatBotRuntime(ms) {
 }
 
 function botStatusLabel(job) {
+  if (job.lesungReview) return 'Lesung prüfen';
   if (job.status === 'queued') return 'wartet';
-  if (job.status === 'running') return formatBotRuntime(job.runningForMs);
+  if (job.status === 'running') {
+    if (job.phase === 'lesen') return `${formatBotRuntime(job.runningForMs)} · liest`;
+    if (job.phase === 'ux') return `${formatBotRuntime(job.runningForMs)} · UX`;
+    return formatBotRuntime(job.runningForMs);
+  }
   if (job.status === 'stopping') return 'wird gestoppt';
   if (job.status === 'stopped') return 'gestoppt';
   if (job.status === 'skipped') return 'übersprungen';
@@ -1276,6 +1281,90 @@ function dedupeBotsForDisplay(jobs) {
   );
 }
 
+function lesungStatusIcon(status) {
+  if (status === 'ok') return '✓';
+  if (status === 'unleserlich') return '?';
+  return '○';
+}
+
+function renderLesungChecklistHtml(job, { editable = false } = {}) {
+  if (job.kind !== 'ki') return '';
+  const rows = Array.isArray(job.lesungCheckliste) ? job.lesungCheckliste : [];
+  const ux = Array.isArray(job.uxCheckliste) ? job.uxCheckliste : [];
+  if (!rows.length && !ux.length) return '';
+
+  let html = '';
+  if (rows.length) {
+    html += '<ul class="bots-checklist" aria-label="Gelesene Felder">';
+    html += rows.map((row) => {
+      const id = escapeHtml(row.id);
+      const label = escapeHtml(row.label);
+      const wert = escapeHtml(row.wert || '');
+      const icon = lesungStatusIcon(row.status);
+      const skipEdit = String(row.id).startsWith('schadenfoto') || row.id === 'fahrzeugschein';
+      if (editable && !skipEdit) {
+        return `<li class="bots-check-row bots-check-row--edit">
+          <span class="bots-check-state" title="${escapeHtml(row.status)}">${icon}</span>
+          <span class="bots-check-label">${label}</span>
+          <input type="text" class="bots-check-input" data-bot-lesung-id="${escapeHtml(job.id)}" data-bot-field="${id}" value="${wert}" aria-label="${label}" />
+        </li>`;
+      }
+      return `<li class="bots-check-row">
+        <span class="bots-check-state">${icon}</span>
+        <span class="bots-check-label">${label}</span>
+        <span class="bots-check-wert">${wert || '—'}</span>
+      </li>`;
+    }).join('');
+    html += '</ul>';
+  }
+  if (ux.length && !job.lesungReview) {
+    html += '<ul class="bots-checklist bots-checklist--ux" aria-label="UltraExpert">';
+    html += ux.map((row) => {
+      const st = row.status === 'ok' ? '✓' : row.status === 'laeuft' ? '…' : '○';
+      return `<li class="bots-check-row bots-check-row--ux">
+        <span class="bots-check-state">${st}</span>
+        <span class="bots-check-label">${escapeHtml(row.label)}</span>
+      </li>`;
+    }).join('');
+    html += '</ul>';
+  }
+  return html;
+}
+
+async function patchLesungOverride(jobId, fieldId, value) {
+  const token = getAdminToken();
+  if (!token || !jobId || !fieldId) return;
+  const res = await fetch(`${ASSIGN_API_URL}/api/bots/${encodeURIComponent(jobId)}/lesung`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ overrides: { [fieldId]: value } }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) {
+    const errorEl = document.getElementById('botsError');
+    if (errorEl) errorEl.textContent = data.error || 'Korrektur nicht gespeichert';
+  }
+}
+
+async function startUxAfterLesung(jobId) {
+  const token = getAdminToken();
+  if (!token || !jobId) return;
+  const res = await fetch(`${ASSIGN_API_URL}/api/bots/${encodeURIComponent(jobId)}/ux-start`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.ok) {
+    const errorEl = document.getElementById('botsError');
+    if (errorEl) errorEl.textContent = data.error || 'UX-Start fehlgeschlagen';
+    return;
+  }
+  refreshBotsList();
+}
+
 function renderBotsList(jobs, { allowStop = false } = {}) {
   const list = document.getElementById('botsList');
   if (!list) return;
@@ -1315,7 +1404,13 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
     const stopBtn = allowStop
       ? `<button type="button" class="bots-stop" data-bot-id="${escapeHtml(job.id || '')}" ${canStop ? '' : 'disabled'}>Stopp</button>`
       : '';
-    const actions = `${copyBtn}${weiterBtn}${stopBtn}`;
+    const uxStartBtn = allowStop && job.lesungReview && job.id
+      ? `<button type="button" class="bots-ux-start" data-bot-ux-start="${escapeHtml(job.id)}">UX starten</button>`
+      : '';
+    const checklist = renderLesungChecklistHtml(job, {
+      editable: allowStop && job.lesungReview === true,
+    });
+    const actions = `${uxStartBtn}${copyBtn}${weiterBtn}${stopBtn}`;
     return `
       <div class="bots-row${bericht ? ' bots-row--bericht' : ''}">
         <div class="bots-leading">
@@ -1325,6 +1420,7 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
             <div class="bots-akte">${akte}</div>
             <div class="bots-meta">${state}</div>
             ${activity ? `<div class="bots-activity">${escapeHtml(activity)}</div>` : ''}
+            ${checklist}
             ${bericht ? `<pre class="bots-bericht">${bericht}</pre>` : ''}
             ${uxLink}
           </div>
@@ -1339,6 +1435,7 @@ async function refreshBotsList() {
   const token = getAdminToken();
   const errorEl = document.getElementById('botsError');
   if (!token) return;
+  if (document.activeElement?.classList?.contains('bots-check-input')) return;
   try {
     const res = await fetch(`${ASSIGN_API_URL}/api/bots`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -1498,9 +1595,23 @@ function bindBotsControls() {
         );
         return;
       }
+      const uxStartBtn = event.target.closest('[data-bot-ux-start]');
+      if (uxStartBtn) {
+        startUxAfterLesung(uxStartBtn.getAttribute('data-bot-ux-start'));
+        return;
+      }
       const stopBtn = event.target.closest('[data-bot-id]');
       if (!stopBtn || stopBtn.disabled) return;
       stopBot(stopBtn.getAttribute('data-bot-id'), false);
+    });
+    list.addEventListener('change', (event) => {
+      const input = event.target.closest('.bots-check-input');
+      if (!input) return;
+      patchLesungOverride(
+        input.getAttribute('data-bot-lesung-id'),
+        input.getAttribute('data-bot-field'),
+        input.value,
+      );
     });
   }
 }

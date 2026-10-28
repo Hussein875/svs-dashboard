@@ -802,6 +802,73 @@ html[data-theme="dark"] .logo {
   word-break: break-word;
 }
 
+.bots-checklist {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-card) 55%, transparent);
+}
+
+.bots-checklist--ux {
+  margin-top: 6px;
+  max-height: 120px;
+}
+
+.bots-check-row {
+  display: grid;
+  grid-template-columns: 1.1rem minmax(5.5rem, 38%) 1fr;
+  gap: 6px 8px;
+  align-items: center;
+  padding: 4px 8px;
+  font-size: 11px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-strong) 65%, transparent);
+}
+
+.bots-check-row:last-child {
+  border-bottom: 0;
+}
+
+.bots-check-state {
+  text-align: center;
+  opacity: 0.85;
+}
+
+.bots-check-label {
+  color: var(--text-muted, var(--text2));
+}
+
+.bots-check-wert {
+  color: var(--text);
+  word-break: break-word;
+}
+
+.bots-check-input {
+  width: 100%;
+  font: inherit;
+  font-size: 11px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+.bots-ux-start {
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: color-mix(in srgb, var(--accent, #3b82f6) 18%, var(--bg-card));
+  color: var(--accent, #2563eb);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 .bots-ux-link {
   display: inline-block;
   margin-top: 8px;
