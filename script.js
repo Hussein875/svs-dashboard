@@ -20,6 +20,184 @@ const IMPORT_RUN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/
 const TAGES_STAT_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=H2:K`;
 const ABSENCE_BADGES_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Statistik&range=L2:N4`;
 
+// Tageslicht Bremen (Termine bei Sonnenlicht)
+const BREMEN_LAT = 53.0793;
+const BREMEN_LON = 8.8017;
+const SUN_TIMES_URL = `https://api.open-meteo.com/v1/forecast?latitude=${BREMEN_LAT}&longitude=${BREMEN_LON}&daily=sunrise,sunset&timezone=Europe%2FBerlin&forecast_days=1`;
+const SUN_TIMES_REFRESH_MS = 60 * 60_000;
+
+const HALLOWEEN_PREF_KEY = 'svs-dashboard-halloween-enabled';
+
+function readHalloweenUrlForce() {
+  try {
+    const force = new URLSearchParams(window.location.search).get('halloween');
+    if (force === '1' || force === 'true') return 'on';
+    if (force === '0' || force === 'false') return 'off';
+  } catch (_) {
+    /* optional */
+  }
+  return null;
+}
+
+function isHalloweenSeasonWindow(date = new Date()) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Berlin',
+      month: 'numeric',
+      day: 'numeric',
+    }).formatToParts(date);
+    const month = Number(parts.find((part) => part.type === 'month')?.value);
+    const day = Number(parts.find((part) => part.type === 'day')?.value);
+    return month === 10 && day >= 1 && day <= 31;
+  } catch (_) {
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return month === 10 && day >= 1 && day <= 31;
+  }
+}
+
+function isHalloweenSeasonAvailable(date = new Date()) {
+  const force = readHalloweenUrlForce();
+  if (force === 'on') return true;
+  if (force === 'off') return false;
+  return isHalloweenSeasonWindow(date);
+}
+
+function readHalloweenPrefEnabled() {
+  try {
+    const saved = localStorage.getItem(HALLOWEEN_PREF_KEY);
+    if (saved === '0') return false;
+    if (saved === '1') return true;
+  } catch (_) {
+    /* private mode */
+  }
+  try {
+    const saved = sessionStorage.getItem(HALLOWEEN_PREF_KEY);
+    if (saved === '0') return false;
+    if (saved === '1') return true;
+  } catch (_) {
+    /* optional */
+  }
+  return true;
+}
+
+function storeHalloweenPrefEnabled(enabled) {
+  const value = enabled ? '1' : '0';
+  try {
+    localStorage.setItem(HALLOWEEN_PREF_KEY, value);
+  } catch (_) {
+    /* private mode */
+  }
+  try {
+    sessionStorage.setItem(HALLOWEEN_PREF_KEY, value);
+  } catch (_) {
+    /* optional */
+  }
+}
+
+function isHalloweenDecorActive(date = new Date()) {
+  if (!isHalloweenSeasonAvailable(date)) return false;
+  return readHalloweenPrefEnabled();
+}
+
+function isHalloweenSeason(date = new Date()) {
+  return isHalloweenDecorActive(date);
+}
+
+const HALLOWEEN_FLOAT_EMOJIS = [
+  '🎃', '🦇', '👻', '🕷️', '🍬', '🕸️', '🧙‍♀️', '🧹', '🧛', '💀',
+  '🐈‍⬛', '🦉', '🔮', '🪦', '😱', '🎃', '🦇', '👻', '🍬', '💀',
+];
+const HALLOWEEN_FALL_EMOJIS = [
+  '🎃', '🦇', '👻', '🍬', '🕷️', '🕸️', '✨', '🍂', '💀', '🧙‍♀️', '🔮', '😱',
+];
+
+function fillSeasonLayer(container, emojis, className, count, sizeBase = 16) {
+  if (!container) return;
+  container.textContent = '';
+  for (let i = 0; i < count; i += 1) {
+    const el = document.createElement('span');
+    el.className = className;
+    el.textContent = emojis[i % emojis.length];
+    el.setAttribute('aria-hidden', 'true');
+    el.style.setProperty('--season-i', String(i));
+    el.style.setProperty('--season-x', `${2 + ((i * 13) % 96)}%`);
+    el.style.setProperty('--season-delay', `${(i * 0.35) % 6}s`);
+    el.style.setProperty('--season-duration', `${6 + (i % 6)}s`);
+    el.style.setProperty('--season-size', `${sizeBase + (i % 3) * 2}px`);
+    el.style.setProperty('--season-swing', `${10 + (i % 8) * 4}px`);
+    container.appendChild(el);
+  }
+}
+
+function updateHalloweenToggleButton(available, active) {
+  const btn = document.getElementById('halloweenToggle');
+  if (!btn) return;
+
+  const show = available && !isKioskMode();
+  btn.hidden = !show;
+  if (!show) return;
+
+  btn.classList.toggle('is-off', !active);
+  btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  btn.title = active ? 'Halloween-Deko ausblenden' : 'Halloween-Deko einblenden';
+  btn.setAttribute(
+    'aria-label',
+    active ? 'Halloween-Deko ausblenden' : 'Halloween-Deko einblenden',
+  );
+}
+
+function applySeasonDecor() {
+  const available = isHalloweenSeasonAvailable();
+  const active = isHalloweenDecorActive();
+  const decor = document.getElementById('seasonDecor');
+  const banner = document.getElementById('seasonBanner');
+  const brandMark = document.getElementById('seasonBrandMark');
+  const brandBat = document.getElementById('seasonBrandBat');
+  const floats = document.getElementById('seasonFloats');
+  const fall = document.getElementById('seasonFall');
+
+  if (active) document.documentElement.setAttribute('data-season', 'halloween');
+  else document.documentElement.removeAttribute('data-season');
+
+  [decor, banner, brandMark, brandBat].forEach((el) => {
+    if (!el) return;
+    el.hidden = !active;
+    el.setAttribute('aria-hidden', active ? 'false' : 'true');
+  });
+
+  if (active) {
+    fillSeasonLayer(floats, HALLOWEEN_FLOAT_EMOJIS, 'season-float', 16, 16);
+    fillSeasonLayer(fall, HALLOWEEN_FALL_EMOJIS, 'season-fall-item', 8, 16);
+  } else {
+    if (floats) floats.textContent = '';
+    if (fall) fall.textContent = '';
+  }
+
+  updateHalloweenToggleButton(available, active);
+}
+
+function initSeasonDecor() {
+  applySeasonDecor();
+}
+
+function toggleHalloweenDecor() {
+  if (!isHalloweenSeasonAvailable()) return;
+  const next = !isHalloweenDecorActive();
+  storeHalloweenPrefEnabled(next);
+  applySeasonDecor();
+}
+
+function bindHalloweenToggle() {
+  const btn = document.getElementById('halloweenToggle');
+  if (!btn || btn.dataset.bound === '1') return;
+  btn.dataset.bound = '1';
+  btn.addEventListener('click', (event) => {
+    event.preventDefault();
+    toggleHalloweenDecor();
+  });
+}
+
 const ADMIN_TOKEN_KEY = 'svs-assign-token';
 const ASSIGN_COLUMNS = ['Ramazan', 'Robar'];
 
@@ -371,9 +549,68 @@ let akteContextMenuBound = false;
 let pinSubmitInFlight = false;
 let badgeSaveInFlight = false;
 const assignInFlightKeys = new Set();
+/** Akte → { bearbeiter, untilMs } — schützt Drag-Zuweisung vor verzögertem Sheet-Lesen */
+const recentAssignByAkte = new Map();
+const RECENT_ASSIGN_TTL_MS = 120_000;
 const kiWatchTimers = new Map();
 const serverKiAkten = new Set();
 const SERVER_KI_JOB_STATUSES = new Set(['queued', 'running', 'stopping', 'opened']);
+
+function rememberRecentAssign(akte, bearbeiter) {
+  const key = normalizeAkteKey(akte);
+  if (!key) return;
+  recentAssignByAkte.set(key, {
+    bearbeiter: String(bearbeiter || '').trim(),
+    untilMs: Date.now() + RECENT_ASSIGN_TTL_MS,
+  });
+}
+
+function clearRecentAssign(akte) {
+  const key = normalizeAkteKey(akte);
+  if (key) recentAssignByAkte.delete(key);
+}
+
+function applyRecentAssignProtection(rows) {
+  const now = Date.now();
+  for (const [key, entry] of [...recentAssignByAkte.entries()]) {
+    if (!entry || entry.untilMs <= now) {
+      recentAssignByAkte.delete(key);
+    }
+  }
+  if (!recentAssignByAkte.size) return rows;
+
+  return rows.map((row) => {
+    const key = normalizeAkteKey(row.Eingang);
+    const pending = recentAssignByAkte.get(key);
+    if (!pending) return row;
+
+    const sheetBearbeiter = String(row.Bearbeiter || '').trim();
+    const sheetColumn = resolveWorkerColumn(sheetBearbeiter);
+    const pendingColumn = resolveWorkerColumn(pending.bearbeiter)
+      || (pending.bearbeiter ? pending.bearbeiter : null);
+
+    // Sheet hat die Zuweisung übernommen → Schutz entfernen
+    if (
+      sheetBearbeiter.toLowerCase() === pending.bearbeiter.toLowerCase()
+      || (pendingColumn && sheetColumn === pendingColumn)
+    ) {
+      recentAssignByAkte.delete(key);
+      return row;
+    }
+
+    // Sonst Optimistic-Wert behalten (Sheet-Lese-Verzögerung / Import-Lag)
+    return { ...row, Bearbeiter: pending.bearbeiter };
+  });
+}
+
+function showAssignErrorBanner(message) {
+  const el = document.getElementById('updateInfo');
+  if (!el) return;
+  const text = String(message || 'Zuweisung fehlgeschlagen').trim();
+  el.textContent = `⚠ ${text}`;
+  el.classList.remove('green', 'orange');
+  el.classList.add('red');
+}
 
 function assignApiErrorMessage(res, data) {
   if (res.status === 404) {
@@ -942,9 +1179,20 @@ function botBerichtLegacy(raw) {
   return `${kopf.trim()}\nOffen:\n${punkte}`;
 }
 
+function botLiveActivity(job) {
+  const raw = String(job?.message || '').trim();
+  if (!raw || raw.startsWith('Akte ')) return '';
+  if (raw.startsWith('{')) return botNachricht(raw);
+  return raw;
+}
+
 function botAnzeige(job) {
   const raw = String(job?.message || '').trim();
+  const running = job?.status === 'queued' || job?.status === 'running' || job?.status === 'stopping';
   if (!raw) return { kurz: botStatusLabel(job), bericht: '' };
+  if (running && raw && !raw.startsWith('Akte ') && !raw.startsWith('{')) {
+    return { kurz: botStatusLabel(job), bericht: '' };
+  }
   if (raw.startsWith('{')) {
     return { kurz: `${botStatusLabel(job)} · ${botNachricht(raw)}`, bericht: '' };
   }
@@ -1045,6 +1293,7 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
       && (job.status === 'queued' || job.status === 'running' || job.status === 'stopping');
     const akte = escapeHtml(job.akte || '');
     const anzeige = botAnzeige(job);
+    const activity = botLiveActivity(job);
     const state = escapeHtml(anzeige.kurz);
     const bericht = anzeige.bericht ? escapeHtml(anzeige.bericht) : '';
     const stimmung = botStimmung(job, job.message || '');
@@ -1053,6 +1302,7 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
     const uxLink = dossierUrl && (job.status === 'opened' || job.status === 'done')
       ? `<a class="bots-ux-link" href="${escapeHtml(dossierUrl)}" target="_blank" rel="noopener">UltraExpert öffnen</a>`
       : '';
+    const copyBtn = job.message
       ? `<button type="button" class="bots-copy" data-bot-key="${jobKey}">Kopieren</button>`
       : '';
     const canContinue = allowStop
@@ -1074,6 +1324,7 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
             <div class="bots-kind">${kind}</div>
             <div class="bots-akte">${akte}</div>
             <div class="bots-meta">${state}</div>
+            ${activity ? `<div class="bots-activity">${escapeHtml(activity)}</div>` : ''}
             ${bericht ? `<pre class="bots-bericht">${bericht}</pre>` : ''}
             ${uxLink}
           </div>
@@ -1500,6 +1751,7 @@ async function assignAkteToColumn(akte, column, card) {
   }
 
   assignInFlightKeys.add(akteKey);
+  rememberRecentAssign(akte, columnToBearbeiter(column));
   const snapshot = applyOptimisticAssign(akte, column);
   showAssignFeedback(card, 'pending', 'Zuweisung läuft…');
 
@@ -1515,25 +1767,42 @@ async function assignAkteToColumn(akte, column, card) {
     const data = await res.json().catch(() => ({}));
 
     if (res.status === 401) {
+      clearRecentAssign(akte);
       revertOptimisticAssign(snapshot);
       lockAdmin();
       showPinModal();
       showAssignFeedback(card, 'error', 'Session abgelaufen');
+      showAssignErrorBanner('Session abgelaufen – bitte erneut entsperren');
       return;
     }
 
     if (!res.ok || (!data.ok && !data.sheetUpdated)) {
+      clearRecentAssign(akte);
       revertOptimisticAssign(snapshot);
-      showAssignFeedback(card, 'error', data.error || `HTTP ${res.status}`);
+      const errMsg = data.error || `HTTP ${res.status}`;
+      showAssignFeedback(card, 'error', errMsg);
+      showAssignErrorBanner(`Zuweisung nach ${column} fehlgeschlagen: ${errMsg}`);
+      try {
+        window.alert(`Zuweisung nach ${column} fehlgeschlagen:\n${errMsg}`);
+      } catch (_) {
+        /* alert blockiert / nicht verfügbar */
+      }
       return;
     }
 
+    rememberRecentAssign(akte, columnToBearbeiter(column));
     const uxHint = data.uxPending ? ' · UX läuft…' : '';
     showAssignFeedback(card, 'ok', `${akte} → ${column}${uxHint}`);
-    fetchData({ force: true });
+    // Sheet/gviz kann kurz den alten Bearbeiter liefern — verzögert nachladen
+    window.setTimeout(() => {
+      fetchData({ force: true });
+    }, 4000);
   } catch (err) {
+    clearRecentAssign(akte);
     revertOptimisticAssign(snapshot);
-    showAssignFeedback(card, 'error', err.message || 'Netzwerkfehler');
+    const errMsg = err.message || 'Netzwerkfehler';
+    showAssignFeedback(card, 'error', errMsg);
+    showAssignErrorBanner(`Zuweisung nach ${column} fehlgeschlagen: ${errMsg}`);
   } finally {
     assignInFlightKeys.delete(akteKey);
   }
@@ -2337,7 +2606,9 @@ async function fetchData({ force = false } = {}) {
       return /\d/.test(row.Eingang);
     });
 
-    const cleanedRows = rows.filter((row) => isVisibleDashboardRow(row));
+    const cleanedRows = applyRecentAssignProtection(
+      rows.filter((row) => isVisibleDashboardRow(row)),
+    );
     setOpenCount(cleanedRows.length);
 
     const numbers = cleanedRows
@@ -2374,6 +2645,38 @@ async function fetchData({ force = false } = {}) {
     inFlightController = null;
     scheduleNextFetch();
     updateTimerDisplay();
+  }
+}
+
+function formatSunClock(isoLocal) {
+  const match = String(isoLocal || '').match(/T(\d{2}):(\d{2})/);
+  return match ? `${match[1]}:${match[2]}` : '–';
+}
+
+function renderSunTimes(sunriseIso, sunsetIso) {
+  const riseEl = document.getElementById('sunriseValue');
+  const setEl = document.getElementById('sunsetValue');
+  const riseClock = document.getElementById('sunriseClock');
+  const setClock = document.getElementById('sunsetClock');
+  const rise = formatSunClock(sunriseIso);
+  const set = formatSunClock(sunsetIso);
+  if (riseClock) riseClock.textContent = rise;
+  if (setClock) setClock.textContent = set;
+  if (riseEl) riseEl.title = `Sonnenaufgang Bremen ${rise}`;
+  if (setEl) setEl.title = `Sonnenuntergang Bremen ${set}`;
+}
+
+async function fetchSunTimes() {
+  try {
+    const res = await fetch(SUN_TIMES_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const sunrise = data?.daily?.sunrise?.[0];
+    const sunset = data?.daily?.sunset?.[0];
+    if (!sunrise || !sunset) throw new Error('Keine Sonnenzeiten');
+    renderSunTimes(sunrise, sunset);
+  } catch (err) {
+    console.warn('fetchSunTimes() Fehler:', err);
   }
 }
 
@@ -2503,6 +2806,14 @@ function buildAkteCardElement(item, positionCol) {
   card.appendChild(nummerEl);
 
   const aktenNummer = extractAktenNummer(nummer);
+  if (aktenNummer === '2305') {
+    const dog = document.createElement('span');
+    dog.className = 'card-easter-dog';
+    dog.textContent = '🐶';
+    dog.setAttribute('aria-hidden', 'true');
+    nummerEl.appendChild(dog);
+  }
+
   const importDate = aktenNummer ? importDateByAkte.get(aktenNummer) : null;
   const ageDays = getAgeDays(importDate);
 
@@ -2838,6 +3149,9 @@ function initKioskMode() {
   const themeBtn = document.getElementById('themeToggle');
   if (themeBtn) themeBtn.hidden = true;
 
+  const halloweenBtn = document.getElementById('halloweenToggle');
+  if (halloweenBtn) halloweenBtn.hidden = true;
+
   const adminBtn = document.getElementById('adminToggle');
   if (adminBtn) adminBtn.hidden = true;
 
@@ -2880,7 +3194,9 @@ async function requestWakeLock() {
 window.addEventListener('DOMContentLoaded', () => {
   initKioskMode();
   initTheme();
+  initSeasonDecor();
   bindThemeToggle();
+  bindHalloweenToggle();
   bindAdminControls();
   bindBadgeAdminControls();
   bindBotsControls();
@@ -2901,4 +3217,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (lastBoardData.length) renderBoard(lastBoardData);
   }, 20_000);
   setInterval(updateTimerDisplay, 1000);
+  fetchSunTimes();
+  setInterval(fetchSunTimes, SUN_TIMES_REFRESH_MS);
 });

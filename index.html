@@ -31,17 +31,56 @@
       } catch (_) {}
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=88">
+  <link rel="stylesheet" href="style.css?v=104">
 </head>
 <body class="dashboard">
+
+  <div class="season-decor" id="seasonDecor" hidden aria-hidden="true">
+    <div class="season-corner season-corner-tl" aria-hidden="true">
+      <span class="season-web">🕸️</span>
+      <span class="season-spider-rig season-spider-rig-left">
+        <span class="season-spider-thread"></span>
+        <span class="season-spider">🕷️</span>
+      </span>
+    </div>
+    <div class="season-corner season-corner-tr" aria-hidden="true">
+      <span class="season-web">🕸️</span>
+      <span class="season-spider-rig season-spider-rig-right">
+        <span class="season-spider-thread"></span>
+        <span class="season-spider">🕷️</span>
+      </span>
+    </div>
+    <div class="season-corner season-corner-br" aria-hidden="true">🎃</div>
+    <div class="season-floats" id="seasonFloats" aria-hidden="true"></div>
+    <div class="season-fall" id="seasonFall" aria-hidden="true"></div>
+  </div>
+
+  <div class="season-banner" id="seasonBanner" hidden aria-hidden="true">
+    <span aria-hidden="true">🦇</span>
+    <span aria-hidden="true">🎃</span>
+    <span>Happy Halloween</span>
+    <span aria-hidden="true">👻</span>
+    <span aria-hidden="true">🕷️</span>
+    <span aria-hidden="true">🍬</span>
+    <span aria-hidden="true">🧙‍♀️</span>
+    <span aria-hidden="true">💀</span>
+    <span aria-hidden="true">🦇</span>
+  </div>
 
   <header class="app-header">
     <div class="brand">
       <img src="Logo.png" alt="SV-Souleiman Logo" class="logo" />
+      <span class="season-brand-mark" id="seasonBrandMark" hidden aria-hidden="true">🎃</span>
+      <span class="season-brand-mark season-brand-mark-bat" id="seasonBrandBat" hidden aria-hidden="true">🦇</span>
     </div>
 
-    <div class="header-main">
-      <div class="next-akte-banner" aria-live="polite" aria-label="Nächste Nr.">
+    <div class="header-main" id="sunTimesWidget" aria-live="polite">
+      <div class="sun-time sun-time-rise" id="sunriseValue" title="Sonnenaufgang Bremen">
+        <span class="sun-time-emoji" aria-hidden="true">🌅</span>
+        <span class="sun-time-clock" id="sunriseClock">–</span>
+      </div>
+
+      <div class="next-akte-banner" aria-label="Nächste Nr.">
         <svg class="next-akte-car" id="nextAkteCar" viewBox="0 0 128 52" aria-hidden="true" focusable="false">
           <ellipse cx="34" cy="44" rx="10" ry="10" fill="#0f172a"/>
           <ellipse cx="34" cy="44" rx="5" ry="5" fill="#94a3b8"/>
@@ -55,6 +94,11 @@
         <span class="next-akte-label">Nächste Nr.</span>
         <span class="next-akte-divider" aria-hidden="true"></span>
         <span class="next-akte-number" id="naechsteNummer">–</span>
+      </div>
+
+      <div class="sun-time sun-time-set" id="sunsetValue" title="Sonnenuntergang Bremen">
+        <span class="sun-time-emoji" aria-hidden="true">🌇</span>
+        <span class="sun-time-clock" id="sunsetClock">–</span>
       </div>
 
       <!-- Archiv: Auto-Lieferung (für spätere Nutzung) -->
@@ -90,6 +134,10 @@
 
     <button type="button" id="badgeAdminToggle" class="badge-admin-toggle" hidden aria-label="Spalten-Status bearbeiten" title="Spalten-Status (Urlaub/Krank)">
       <span class="badge-admin-toggle-icon" aria-hidden="true">🏷️</span>
+    </button>
+
+    <button type="button" id="halloweenToggle" class="theme-toggle halloween-toggle" hidden aria-pressed="true" aria-label="Halloween-Deko ausblenden" title="Halloween-Deko ausblenden">
+      <span class="theme-toggle-icon halloween-toggle-icon" aria-hidden="true">🎃</span>
     </button>
 
     <button type="button" id="themeToggle" class="theme-toggle" aria-label="Design umschalten" title="Dunkles Design">
@@ -230,6 +278,6 @@
     </button>
   </div>
 
-<script src="script.js?v=126"></script>
+<script src="script.js?v=141"></script>
 </body>
 </html>
