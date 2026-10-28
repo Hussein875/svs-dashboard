@@ -1441,17 +1441,6 @@ function renderLesungChecklistHtml(job, { editable = false } = {}) {
   return html;
 }
 
-function collectLesungOverridesFromDom(jobId) {
-  const overrides = {};
-  if (!jobId) return overrides;
-  document.querySelectorAll(`.bots-check-input[data-bot-lesung-id="${CSS.escape(jobId)}"]`).forEach((input) => {
-    const field = input.getAttribute('data-bot-field');
-    if (!field) return;
-    overrides[field] = input.value;
-  });
-  return overrides;
-}
-
 async function patchLesungOverrides(jobId, overrides) {
   const token = getAdminToken();
   if (!token || !jobId || !overrides || typeof overrides !== 'object') return { ok: false };
