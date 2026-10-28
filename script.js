@@ -1465,28 +1465,63 @@ async function patchLesungOverride(jobId, fieldId, value) {
   return patchLesungOverrides(jobId, { [fieldId]: value });
 }
 
-async function startUxAfterLesung(jobId) {
+async function startUxAfterLesung(jobId, triggerBtn) {
   const token = getAdminToken();
-  if (!token || !jobId) return;
   const errorEl = document.getElementById('botsError');
-  const overrides = collectLesungOverridesFromDom(jobId);
-  const saved = await patchLesungOverrides(jobId, overrides);
-  if (!saved.ok) return;
-  const res = await fetch(`${ASSIGN_API_URL}/api/bots/${encodeURIComponent(jobId)}/ux-start`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ overrides }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.ok) {
-    if (errorEl) errorEl.textContent = data.error || 'UX-Start fehlgeschlagen';
+  if (!token) {
+    if (errorEl) errorEl.textContent = 'Admin-PIN fehlt — bitte erneut anmelden.';
+    showPinModal();
     return;
   }
-  if (errorEl) errorEl.textContent = '';
-  refreshBotsList();
+  if (!jobId) {
+    if (errorEl) errorEl.textContent = 'Interner Job fehlt — Bots-Modal schließen, neu öffnen, erneut versuchen.';
+    return;
+  }
+  const labelDefault = 'Alles vollständig — UX starten';
+  if (triggerBtn) {
+    triggerBtn.disabled = true;
+    triggerBtn.textContent = 'Startet UX…';
+  }
+  try {
+    const overrides = collectLesungOverridesFromDom(jobId);
+    if (Object.keys(overrides).length > 0) {
+      const saved = await patchLesungOverrides(jobId, overrides);
+      if (!saved.ok) {
+        if (errorEl && !errorEl.textContent) {
+          errorEl.textContent = saved.error || 'Korrektur nicht gespeichert — UX-Start abgebrochen.';
+        }
+        return;
+      }
+    }
+    const res = await fetch(`${ASSIGN_API_URL}/api/bots/${encodeURIComponent(jobId)}/ux-start`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ overrides }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      lockAdmin();
+      if (errorEl) errorEl.textContent = 'Sitzung abgelaufen — Admin-PIN erneut eingeben.';
+      showPinModal();
+      return;
+    }
+    if (!res.ok || !data.ok) {
+      if (errorEl) errorEl.textContent = data.error || `UX-Start fehlgeschlagen (HTTP ${res.status})`;
+      return;
+    }
+    if (errorEl) errorEl.textContent = '';
+    refreshBotsList();
+  } catch (err) {
+    if (errorEl) errorEl.textContent = err.message || 'Netzwerkfehler beim UX-Start';
+  } finally {
+    if (triggerBtn) {
+      triggerBtn.disabled = false;
+      triggerBtn.textContent = labelDefault;
+    }
+  }
 }
 
 function syncBotsDialogReviewMode(jobs) {
@@ -1560,14 +1595,15 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
       : '';
     const reviewMode = isLesungReviewJob(job);
     const canEditLesung = canEditLesungChecklist(job, allowStop);
-    const uxStartBtn = canEditLesung && job.id
-      ? `<button type="button" class="bots-ux-start bots-action bots-action--primary" data-bot-ux-start="${escapeHtml(job.id)}" title="Speichert deine Korrekturen und startet UltraExpert">Alles vollständig — UX starten</button>`
+    const uxStartBtnHtml = canEditLesung && job.id
+      ? `<button type="button" class="bots-ux-start bots-action bots-action--primary" data-bot-ux-start="${escapeHtml(job.id)}" title="Speichert Korrekturen und startet UltraExpert">Alles vollständig — UX starten</button>`
       : '';
     const reviewHint = reviewMode && allowStop
-      ? '<p class="bots-review-hint">Felder unten anpassen (z. B. Schadentag), dann <strong>Alles vollständig — UX starten</strong>.</p>'
+      ? `<div class="bots-review-actions">${uxStartBtnHtml}<p class="bots-review-hint">Felder anpassen (z. B. Schadentag), dann <strong>Alles vollständig — UX starten</strong>. Fehler stehen rot unter der Liste.</p></div>`
       : reviewMode && !allowStop
         ? '<p class="bots-review-hint">Admin-PIN oben → Felder korrigieren und UX starten.</p>'
         : '';
+    const uxStartBtn = uxStartBtnHtml;
     const checklist = renderLesungChecklistHtml(job, {
       editable: canEditLesung,
     });
@@ -1851,7 +1887,9 @@ function bindBotsControls() {
       }
       const uxStartBtn = event.target.closest('[data-bot-ux-start]');
       if (uxStartBtn) {
-        startUxAfterLesung(uxStartBtn.getAttribute('data-bot-ux-start'));
+        event.preventDefault();
+        event.stopPropagation();
+        startUxAfterLesung(uxStartBtn.getAttribute('data-bot-ux-start'), uxStartBtn);
         return;
       }
       const restartBtn = event.target.closest('[data-bot-ki-restart]');
@@ -1872,7 +1910,7 @@ function bindBotsControls() {
         const input = document.getElementById('botsAkteInput');
         if (input) input.value = row.getAttribute('data-bot-row-akte') || '';
       }
-      const stopBtn = event.target.closest('[data-bot-id]');
+      const stopBtn = event.target.closest('button.bots-stop[data-bot-id]');
       if (!stopBtn || stopBtn.disabled) return;
       stopBot(stopBtn.getAttribute('data-bot-id'), false);
     });

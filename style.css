@@ -905,6 +905,19 @@ html[data-theme="dark"] .logo {
   word-break: break-word;
 }
 
+.bots-review-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+.bots-review-actions .bots-ux-start {
+  align-self: flex-start;
+  font-size: 14px;
+  padding: 10px 16px;
+}
+
 .bots-review-hint {
   margin: 8px 0 4px;
   padding: 8px 10px;
