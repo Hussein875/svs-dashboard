@@ -1512,7 +1512,7 @@ async function startUxAfterLesung(jobId, triggerBtn) {
       if (errorEl) errorEl.textContent = data.error || `UX-Start fehlgeschlagen (HTTP ${res.status})`;
       return;
     }
-    if (errorEl) errorEl.textContent = '';
+    if (errorEl) errorEl.textContent = data.alreadyStarted ? 'UltraExpert läuft bereits.' : '';
     refreshBotsList();
   } catch (err) {
     if (errorEl) errorEl.textContent = err.message || 'Netzwerkfehler beim UX-Start';
@@ -1599,7 +1599,7 @@ function renderBotsList(jobs, { allowStop = false } = {}) {
       ? `<button type="button" class="bots-ux-start bots-action bots-action--primary" data-bot-ux-start="${escapeHtml(job.id)}" title="Speichert Korrekturen und startet UltraExpert">Alles vollständig — UX starten</button>`
       : '';
     const reviewHint = reviewMode && allowStop
-      ? `<div class="bots-review-actions">${uxStartBtnHtml}<p class="bots-review-hint">Felder anpassen (z. B. Schadentag), dann <strong>Alles vollständig — UX starten</strong>. Fehler stehen rot unter der Liste.</p></div>`
+      ? `<div class="bots-review-actions">${uxStartBtnHtml}<p class="bots-review-hint">Felder anpassen (z. B. Schadentag). Ist alles ✓, startet UltraExpert <strong>automatisch</strong> — oder Button „UX starten“.</p></div>`
       : reviewMode && !allowStop
         ? '<p class="bots-review-hint">Admin-PIN oben → Felder korrigieren und UX starten.</p>'
         : '';
@@ -1698,7 +1698,7 @@ function updateBotsModalAdminActions() {
   if (unlockBtn) unlockBtn.hidden = adminUnlocked;
   if (hint) {
     hint.textContent = adminUnlocked
-      ? 'Lesung prüfen: Felder korrigieren → „Alles vollständig — UX starten“. UltraExpert für laufende Akte schließen.'
+      ? 'Lesung prüfen: fehlende Felder korrigieren — bei ✓ überall startet UX automatisch. UltraExpert für laufende Akte schließen.'
       : 'Laufende Jobs (nur Anzeige). Zum Bearbeiten und Starten: Admin-PIN oben.';
   }
 }
