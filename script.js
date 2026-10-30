@@ -619,6 +619,14 @@ function assignApiErrorMessage(res, data) {
   return data?.error || `HTTP ${res.status}`;
 }
 
+function formatFetchError(err) {
+  const msg = String(err?.message || err || '').trim();
+  if (msg === 'Load failed' || msg === 'Failed to fetch' || msg === 'NetworkError when attempting to fetch resource.') {
+    return `Assign-API nicht erreichbar (${ASSIGN_API_URL}). Netzwerk, CORS oder Server prüfen.`;
+  }
+  return msg || 'Netzwerkfehler';
+}
+
 function collectServerKiAktenFromPayload(data) {
   const list = [];
   if (Array.isArray(data?.akten)) list.push(...data.akten);
@@ -1444,21 +1452,28 @@ function renderLesungChecklistHtml(job, { editable = false } = {}) {
 async function patchLesungOverrides(jobId, overrides) {
   const token = getAdminToken();
   if (!token || !jobId || !overrides || typeof overrides !== 'object') return { ok: false };
-  const res = await fetch(`${ASSIGN_API_URL}/api/bots/${encodeURIComponent(jobId)}/lesung`, {
-    method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ overrides }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.ok) {
+  try {
+    const res = await fetch(`${ASSIGN_API_URL}/api/bots/${encodeURIComponent(jobId)}/lesung`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ overrides }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      const errorEl = document.getElementById('botsError');
+      if (errorEl) errorEl.textContent = data.error || 'Korrektur nicht gespeichert';
+      return { ok: false, error: data.error };
+    }
+    return { ok: true, job: data.job };
+  } catch (err) {
     const errorEl = document.getElementById('botsError');
-    if (errorEl) errorEl.textContent = data.error || 'Korrektur nicht gespeichert';
-    return { ok: false, error: data.error };
+    const text = formatFetchError(err);
+    if (errorEl) errorEl.textContent = text;
+    return { ok: false, error: text };
   }
-  return { ok: true, job: data.job };
 }
 
 async function patchLesungOverride(jobId, fieldId, value) {
@@ -1486,10 +1501,7 @@ async function startUxAfterLesung(jobId, triggerBtn) {
     const overrides = collectLesungOverridesFromDom(jobId);
     if (Object.keys(overrides).length > 0) {
       const saved = await patchLesungOverrides(jobId, overrides);
-      if (!saved.ok) {
-        if (errorEl && !errorEl.textContent) {
-          errorEl.textContent = saved.error || 'Korrektur nicht gespeichert — UX-Start abgebrochen.';
-        }
+      if (!saved.ok && saved.error && !saved.error.includes('nicht erreichbar')) {
         return;
       }
     }
@@ -1515,7 +1527,7 @@ async function startUxAfterLesung(jobId, triggerBtn) {
     if (errorEl) errorEl.textContent = data.alreadyStarted ? 'UltraExpert läuft bereits.' : '';
     refreshBotsList();
   } catch (err) {
-    if (errorEl) errorEl.textContent = err.message || 'Netzwerkfehler beim UX-Start';
+    if (errorEl) errorEl.textContent = formatFetchError(err);
   } finally {
     if (triggerBtn) {
       triggerBtn.disabled = false;
@@ -1657,7 +1669,7 @@ async function refreshBotsList() {
       renderBoard(lastBoardData);
     }
   } catch (err) {
-    if (errorEl) errorEl.textContent = err.message || 'Netzwerkfehler';
+    if (errorEl) errorEl.textContent = formatFetchError(err);
   }
 }
 
